@@ -940,7 +940,7 @@
             const codeHeader = document.getElementById('header-pantry-code');
             const shareUserId = document.getElementById('share-user-id');
 
-            if (codeHeader) codeHeader.innerText = currentPantryCode;
+            if (codeHeader) codeHeader.innerText = currentUser ? currentUser.uid.substring(0, 8).toUpperCase() : currentPantryCode;
             if (shareUserId) shareUserId.innerText = currentUser ? currentUser.uid.substring(0, 8) + '...' : 'Local';
 
             if (online) {
@@ -960,7 +960,8 @@
 
             unsubscribeSnapshot = onSnapshot(itemsCol, (snapshot) => {
                 const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                pantryItems = allDocs.filter(item => item.pantryCode === currentPantryCode);
+                // Sem filtragem por pantryCode para garantir sincronizacao real por UID
+                pantryItems = allDocs;
                 saveToLocalStorage();
                 renderAll();
             }, (err) => {
@@ -1894,13 +1895,24 @@
             if (!item) return;
 
             document.getElementById('advice-item-title').innerText = `Dicas de Conservação: ${item.name}`;
+            document.getElementById('advice-modal').classList.remove('hidden');
+
+            const fallbackTips = getFallbackTips(item.name);
+            const fallbackHtml = `<ul class="list-disc pl-5 space-y-1.5">` + 
+                fallbackTips.map(tip => `<li>${tip}</li>`).join('') + 
+                `</ul><p class="text-[10px] text-slate-400 mt-3 italic"><i class="fa-solid fa-wifi-slash"></i> Exibindo dicas da base offline local.</p>`;
+
             document.getElementById('advice-content').innerHTML = `
                 <div class="py-6 text-center space-y-2">
                     <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-amber-600 border-t-transparent"></div>
                     <p class="text-xs text-slate-500">Buscando dicas com a IA...</p>
                 </div>
             `;
-            document.getElementById('advice-modal').classList.remove('hidden');
+
+            if (!GEMINI_API_KEY) {
+                document.getElementById('advice-content').innerHTML = fallbackHtml;
+                return;
+            }
 
             const prompt = `Dê 3 dicas curtas e práticas em tópicos sobre como conservar por mais tempo o item "${item.name}" (${item.category}) na cozinha.`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
@@ -1911,10 +1923,11 @@
                 if (text) {
                     document.getElementById('advice-content').innerHTML = `<p class="whitespace-pre-line">${text}</p>`;
                 } else {
-                    throw new Error('Erro');
+                    throw new Error('Retorno vazio da API');
                 }
             } catch (e) {
-                document.getElementById('advice-content').innerText = 'Não foi possível carregar as dicas.';
+                console.warn("Falha ao consultar API do Gemini, usando fallback local:", e);
+                document.getElementById('advice-content').innerHTML = fallbackHtml;
             }
         }
 
