@@ -26,9 +26,30 @@
         }
         .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
 
+        /* Regras de Responsividade Mobile */
         @media (max-width: 768px) {
-            .mobile-stack { flex-direction: column !important; align-items: stretch !important; }
-            .mobile-modal-width { max-width: 92vw !important; width: 92vw !important; }
+            .app-header-container {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+                padding: 12px 16px !important;
+            }
+            .app-header-actions {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+                width: 100% !important;
+                justify-content: flex-start !important;
+            }
+            .app-card, .app-table-container {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .app-modal-box {
+                max-width: 90vw !important;
+                width: 90vw !important;
+                margin: auto !important;
+            }
         }
     </style>
 </head>
@@ -36,46 +57,44 @@
 
     <!-- Top Application Header -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
-                <!-- Bloco Esquerdo: Logo & Status de Conexão -->
-                <div class="flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200 flex-shrink-0">
-                            <i class="fa-solid fa-boxes-packing text-lg"></i>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4">
+            <div class="app-header-container flex flex-wrap justify-between items-center gap-3">
+                <!-- Bloco Esquerdo: Logo & Badge de Status -->
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200 flex-shrink-0">
+                        <i class="fa-solid fa-boxes-packing text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Despensa Inteligente</h1>
+                            <span id="cloud-status-badge" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                                <i class="fa-solid fa-circle-notch animate-spin"></i> Conectando...
+                            </span>
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Despensa Inteligente</h1>
-                                <span id="cloud-status-badge" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                                    <i class="fa-solid fa-circle-notch animate-spin"></i> Conectando...
-                                </span>
-                            </div>
-                            <p class="text-xs text-slate-500 font-medium hidden sm:block">Controle de Estoque & Compartilhamento Familiar em Tempo Real</p>
-                        </div>
+                        <p class="text-xs text-slate-500 font-medium hidden sm:block">Controle de Estoque & Compartilhamento Familiar em Tempo Real</p>
                     </div>
                 </div>
 
-                <!-- Bloco Direito: Botões de Ação e Perfil de Usuário -->
-                <div class="flex items-center justify-start lg:justify-end gap-1.5 sm:gap-2 flex-wrap">
+                <!-- Bloco Direito: Perfil do Usuário e Botões de Ação -->
+                <div class="app-header-actions flex items-center justify-start sm:justify-end gap-2 flex-wrap">
+                    <div id="auth-container" class="flex items-center gap-2 flex-shrink-0"></div>
                     <button onclick="openConfigIAModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Configurar Gemini API Key" id="btn-config-ia">
-                        <i class="fa-solid fa-gear text-slate-600"></i> <span>Configurar IA</span>
+                        <i class="fa-solid fa-gear text-slate-600"></i> <span>⚙️ Configurar IA</span>
                     </button>
                     <button onclick="openShareModal()" class="bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-300 hover:border-indigo-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs" title="Compartilhar lista com família" id="btn-share-pantry">
                         <i class="fa-solid fa-users text-indigo-600"></i>
                         <span class="hidden sm:inline">Despensa:</span>
                         <span id="header-pantry-code" class="font-mono bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-900 font-bold">...</span>
                     </button>
-                    <button onclick="openScanModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" title="Escanear produto com IA" id="btn-scan-ia">
+                    <button onclick="openScanModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" title="Escanear produto com IA" id="btn-scan-ia">
                         <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> <span>Escanear IA</span>
                     </button>
-                    <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" id="btn-new-item">
+                    <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" id="btn-new-item">
                         <i class="fa-solid fa-plus"></i> <span>Novo Item</span>
                     </button>
-                    <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Exportar para CSV / Excel" id="btn-export-csv">
+                    <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Exportar para CSV / Excel" id="btn-export-csv">
                         <i class="fa-solid fa-file-csv text-emerald-600"></i> <span class="hidden sm:inline">Exportar</span>
                     </button>
-                    <div id="auth-container" class="flex items-center gap-2 border-l border-slate-200 pl-2"></div>
                 </div>
             </div>
         </div>
@@ -363,7 +382,7 @@
 
     <!-- MODAL FOR SHARE & PANTRY CODE -->
     <div id="share-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in">
+        <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-users text-indigo-300 text-lg"></i>
@@ -419,7 +438,7 @@
 
     <!-- MODAL FOR SCANNER -->
     <div id="scan-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden animate-fade-in">
+        <div class="app-modal-box bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-wand-magic-sparkles text-amber-300 text-lg"></i>
@@ -488,7 +507,7 @@
 
     <!-- MODAL FOR CONSERVATION TIPS -->
     <div id="advice-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-fade-in">
+        <div class="app-modal-box bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-amber-600 text-white px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-lightbulb text-amber-200 text-lg"></i>
@@ -510,7 +529,7 @@
 
     <!-- MODAL FOR ADD / EDIT ITEM -->
     <div id="item-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in">
+        <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
                 <h3 id="item-modal-title" class="font-bold text-lg">Adicionar Novo Item</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg p-1 cursor-pointer">
@@ -582,7 +601,7 @@
 
     <!-- CUSTOM CONFIRMATION MODAL -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4 animate-fade-in text-center">
+        <div class="app-modal-box bg-white rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4 animate-fade-in text-center mx-auto">
             <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-xl mx-auto">
                 <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
@@ -598,7 +617,7 @@
     <!-- TOAST NOTIFICATION CONTAINER -->
         <!-- MODAL FOR CONFIG GEMINI API KEY -->
     <div id="config-ia-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in">
+        <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-gear text-indigo-300 text-lg"></i>
