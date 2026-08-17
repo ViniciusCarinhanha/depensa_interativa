@@ -25,50 +25,57 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
+
+        @media (max-width: 768px) {
+            .mobile-stack { flex-direction: column !important; align-items: stretch !important; }
+            .mobile-modal-width { max-width: 92vw !important; width: 92vw !important; }
+        }
     </style>
 </head>
 <body class="h-full flex flex-col text-slate-800 antialiased bg-slate-50">
 
     <!-- Top Application Header -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- App Logo & Title -->
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200">
-                        <i class="fa-solid fa-boxes-packing text-lg"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Despensa Inteligente</h1>
-                            <span id="cloud-status-badge" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
-                                <i class="fa-solid fa-circle-notch animate-spin"></i> Conectando...
-                            </span>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
+                <!-- Bloco Esquerdo: Logo & Status de Conexão -->
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200 flex-shrink-0">
+                            <i class="fa-solid fa-boxes-packing text-lg"></i>
                         </div>
-                        <p class="text-xs text-slate-500 font-medium hidden sm:block">Controle de Estoque & Compartilhamento Familiar em Tempo Real</p>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Despensa Inteligente</h1>
+                                <span id="cloud-status-badge" class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-notch animate-spin"></i> Conectando...
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 font-medium hidden sm:block">Controle de Estoque & Compartilhamento Familiar em Tempo Real</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                    <button onclick="openConfigIAModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 sm:px-3 sm:py-2 rounded-lg text-sm font-medium transition border border-slate-300 cursor-pointer" title="Configurar Gemini API Key" id="btn-config-ia">
-                        <i class="fa-solid fa-gear"></i> <span class="hidden lg:inline">Configurar IA</span>
+                <!-- Bloco Direito: Botões de Ação e Perfil de Usuário -->
+                <div class="flex items-center justify-start lg:justify-end gap-1.5 sm:gap-2 flex-wrap">
+                    <button onclick="openConfigIAModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Configurar Gemini API Key" id="btn-config-ia">
+                        <i class="fa-solid fa-gear text-slate-600"></i> <span>Configurar IA</span>
                     </button>
-                    <button onclick="openShareModal()" class="bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-300 hover:border-indigo-300 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer" title="Compartilhar lista com família" id="btn-share-pantry">
+                    <button onclick="openShareModal()" class="bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-300 hover:border-indigo-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs" title="Compartilhar lista com família" id="btn-share-pantry">
                         <i class="fa-solid fa-users text-indigo-600"></i>
-                        <span class="hidden md:inline">Despensa:</span>
+                        <span class="hidden sm:inline">Despensa:</span>
                         <span id="header-pantry-code" class="font-mono bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-900 font-bold">...</span>
                     </button>
-                    <button onclick="openScanModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" title="Escanear produto com IA" id="btn-scan-ia">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="hidden sm:inline">Escanear IA</span>
+                    <button onclick="openScanModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" title="Escanear produto com IA" id="btn-scan-ia">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> <span>Escanear IA</span>
                     </button>
-                    <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm cursor-pointer" id="btn-new-item">
-                        <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Novo Item</span>
+                    <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" id="btn-new-item">
+                        <i class="fa-solid fa-plus"></i> <span>Novo Item</span>
                     </button>
-                    <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 sm:px-3 sm:py-2 rounded-lg text-sm font-medium transition border border-slate-300 cursor-pointer" title="Exportar para CSV / Excel" id="btn-export-csv">
-                        <i class="fa-solid fa-file-csv"></i> <span class="hidden lg:inline">Exportar</span>
+                    <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Exportar para CSV / Excel" id="btn-export-csv">
+                        <i class="fa-solid fa-file-csv text-emerald-600"></i> <span class="hidden sm:inline">Exportar</span>
                     </button>
-                    <div id="auth-container" class="flex items-center gap-2 border-l border-slate-200 pl-2 sm:pl-3"></div>
+                    <div id="auth-container" class="flex items-center gap-2 border-l border-slate-200 pl-2"></div>
                 </div>
             </div>
         </div>
@@ -836,14 +843,14 @@
 
             if (user) {
                 authContainer.innerHTML = `
-                    <div class="flex items-center gap-2 border-l border-slate-200 pl-2 sm:pl-3">
-                        <img id="user-avatar" class="w-8 h-8 rounded-full border border-slate-200" src="${user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'}" alt="Avatar">
-                        <div class="hidden md:flex flex-col text-left">
-                            <span id="user-display-name" class="text-xs font-semibold text-slate-800 leading-tight">${user.displayName || 'Usuário'}</span>
-                            <span class="text-[10px] text-slate-400">Logado</span>
+                    <div class="flex items-center gap-1.5 sm:gap-2">
+                        <img id="user-avatar" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-slate-200 object-cover flex-shrink-0" src="${user.photoURL || 'https://www.gravatar.com/avatar/?d=mp'}" alt="Avatar">
+                        <div class="hidden xl:flex flex-col text-left">
+                            <span id="user-display-name" class="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[90px]">${user.displayName || 'Usuário'}</span>
+                            <span class="text-[10px] text-emerald-600 font-medium">Online</span>
                         </div>
-                        <button onclick="logout()" class="text-slate-500 hover:text-rose-600 p-1.5 rounded-lg text-xs font-semibold transition cursor-pointer" title="Sair da conta">
-                            <i class="fa-solid fa-right-from-bracket text-base"></i>
+                        <button onclick="logout()" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg text-xs font-semibold transition cursor-pointer hover:bg-slate-100" title="Sair da conta">
+                            <i class="fa-solid fa-right-from-bracket text-sm"></i>
                         </button>
                     </div>
                 `;
@@ -862,7 +869,7 @@
                 }
             } else {
                 authContainer.innerHTML = `
-                    <button onclick="loginWithGoogle()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-sm ml-2">
+                    <button onclick="loginWithGoogle()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer shadow-xs whitespace-nowrap">
                         <i class="fa-brands fa-google text-red-500"></i>
                         <span>Entrar com Google</span>
                     </button>
@@ -1480,8 +1487,12 @@
         }
 
         async function callGeminiApi(payload, model = "gemini-1.5-flash", suppressToast = false) {
+            const apiKey = (localStorage.getItem('gemini_api_key') || (_k1 + _k2 + _k3 + _k4)).trim();
             let cleanModel = model.replace(/^models\//, "");
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${GEMINI_API_KEY}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey}`;
+            
+            console.log(`[Gemini API] Iniciando requisição para: https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent`);
+            
             try {
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1489,23 +1500,32 @@
                     body: JSON.stringify(payload)
                 });
                 
+                console.log(`[Gemini API] Resposta HTTP ${response.status} (${response.statusText}) para modelo '${cleanModel}'`);
+                
                 if (!response.ok) {
+                    let errMsg = `Erro da API (Status ${response.status})`;
+                    let errDetails = null;
+                    try {
+                        errDetails = await response.json();
+                        if (errDetails.error && errDetails.error.message) {
+                            errMsg = errDetails.error.message;
+                        }
+                        console.error(`[Gemini API] Detalhes do erro JSON (${response.status}):`, errDetails);
+                    } catch (e) {
+                        const rawText = await response.text();
+                        console.error(`[Gemini API] Detalhes do erro texto (${response.status}):`, rawText);
+                        errMsg = rawText || errMsg;
+                    }
+
+                    // Fallback automático de modelos no caso de 404
                     if (response.status === 404 && cleanModel === "gemini-1.5-flash") {
-                        console.warn("gemini-1.5-flash não encontrado (404). Tentando fallback para gemini-1.5-flash-latest...");
+                        console.warn("[Gemini API] gemini-1.5-flash retornou 404. Tentando fallback para gemini-1.5-flash-latest...");
                         return await callGeminiApi(payload, "gemini-1.5-flash-latest", suppressToast);
                     }
                     if (response.status === 404 && cleanModel === "gemini-1.5-flash-latest") {
-                        console.warn("gemini-1.5-flash-latest não encontrado (404). Tentando fallback para gemini-2.0-flash...");
+                        console.warn("[Gemini API] gemini-1.5-flash-latest retornou 404. Tentando fallback para gemini-2.0-flash...");
                         return await callGeminiApi(payload, "gemini-2.0-flash", suppressToast);
                     }
-                    
-                    let errMsg = `Erro da API (Status ${response.status})`;
-                    try {
-                        const errData = await response.json();
-                        if (errData.error && errData.error.message) {
-                            errMsg = errData.error.message;
-                        }
-                    } catch (e) {}
 
                     if (!suppressToast) {
                         if (response.status === 403) {
@@ -1519,9 +1539,12 @@
                     }
                     throw new Error(errMsg);
                 }
-                return await response.json();
+                
+                const data = await response.json();
+                console.log("[Gemini API] Dados recebidos com sucesso:", data);
+                return data;
             } catch (err) {
-                console.error("Call Gemini API error:", err);
+                console.error("[Gemini API] Erro na execução da chamada:", err);
                 throw err;
             }
         }
@@ -1679,8 +1702,9 @@
                 }
             };
 
+            const apiKey = (localStorage.getItem('gemini_api_key') || (_k1 + _k2 + _k3 + _k4)).trim();
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${GEMINI_API_KEY}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1918,9 +1942,14 @@
             document.getElementById('advice-modal').classList.remove('hidden');
 
             const fallbackTips = getFallbackTips(item.name);
-            const fallbackHtml = `<ul class="list-disc pl-5 space-y-1.5">` + 
-                fallbackTips.map(tip => `<li>${tip}</li>`).join('') + 
-                `</ul><p class="text-[10px] text-slate-400 mt-3 italic"><i class="fa-solid fa-wifi-slash"></i> Exibindo dicas da base offline local.</p>`;
+            const fallbackHtml = `
+                <ul class="list-disc pl-5 space-y-1.5 text-slate-700">
+                    ${fallbackTips.map(tip => `<li>${tip}</li>`).join('')}
+                </ul>
+                <p class="text-[11px] text-slate-400 mt-3 italic flex items-center gap-1">
+                    <i class="fa-solid fa-wifi-slash"></i> Exibindo dicas da base offline local.
+                </p>
+            `;
 
             document.getElementById('advice-content').innerHTML = `
                 <div class="py-6 text-center space-y-2">
@@ -1929,23 +1958,33 @@
                 </div>
             `;
 
-            if (!GEMINI_API_KEY) {
+            const apiKey = (localStorage.getItem('gemini_api_key') || (_k1 + _k2 + _k3 + _k4)).trim();
+            if (!apiKey) {
+                console.warn("[Dicas Conservação] Chave API não configurada. Usando fallback offline.");
                 document.getElementById('advice-content').innerHTML = fallbackHtml;
                 return;
             }
 
             const prompt = `Dê 3 dicas curtas e práticas em tópicos sobre como conservar por mais tempo o item "${item.name}" (${item.category}) na cozinha.`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
             try {
                 const result = await callGeminiApi(payload, "gemini-1.5-flash", true);
                 const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (text) {
-                    document.getElementById('advice-content').innerHTML = `<p class="whitespace-pre-line">${text}</p>`;
+                    document.getElementById('advice-content').innerHTML = `
+                        <div class="space-y-3">
+                            <p class="whitespace-pre-line text-slate-700 leading-relaxed">${text}</p>
+                            <p class="text-[11px] text-indigo-600 mt-2 font-medium flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md w-fit">
+                                <i class="fa-solid fa-sparkles text-amber-500"></i> ✨ Dica gerada por IA
+                            </p>
+                        </div>
+                    `;
                 } else {
-                    throw new Error('Retorno vazio da API');
+                    throw new Error('Resposta sem candidatos de texto válidos');
                 }
             } catch (e) {
-                console.warn("Falha ao consultar API do Gemini, usando fallback local:", e);
+                console.warn("[Dicas Conservação] Falha na chamada da API, ativando fallback offline:", e);
                 document.getElementById('advice-content').innerHTML = fallbackHtml;
             }
         }
