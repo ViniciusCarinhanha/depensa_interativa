@@ -77,9 +77,9 @@
 
                 <!-- Bloco Direito: Perfil do Usuário e Botões de Ação -->
                 <div class="app-header-actions flex items-center justify-start sm:justify-end gap-2 flex-wrap">
-                    <div id="auth-container" class="flex items-center gap-2 flex-shrink-0"></div>
+                    <div id="auth-container" class="flex items-center gap-2 flex-shrink-0 mr-1"></div>
                     <button onclick="openConfigIAModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Configurar Gemini API Key" id="btn-config-ia">
-                        <i class="fa-solid fa-gear text-slate-600"></i> <span>⚙️ Configurar IA</span>
+                        <span>⚙️ Configurar IA</span>
                     </button>
                     <button onclick="openShareModal()" class="bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-300 hover:border-indigo-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs" title="Compartilhar lista com família" id="btn-share-pantry">
                         <i class="fa-solid fa-users text-indigo-600"></i>
@@ -1507,70 +1507,39 @@
             showToast('Lista copiada! Cole no WhatsApp.', 'success');
         }
 
-        async function callGeminiApi(payload, model = "gemini-flash-latest", suppressToast = false) {
+        async function callGeminiApi(promptText, base64Image = null, mimeType = "image/jpeg") {
             const apiKey = (localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY).trim();
-            let cleanModel = model.replace(/^models\//, "");
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent`;
             
-            console.log(`[Gemini API] Iniciando requisição para: ${apiUrl} (Header 'X-goog-api-key' ativo)`);
-            
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-goog-api-key': apiKey
-                    },
-                    body: JSON.stringify(payload)
+            const parts = [{ text: promptText }];
+
+            if (base64Image) {
+                parts.push({
+                    inline_data: {
+                        mime_type: mimeType,
+                        data: base64Image
+                    }
                 });
-                
-                console.log(`[Gemini API] Resposta HTTP ${response.status} (${response.statusText}) para modelo '${cleanModel}'`);
-                
-                if (!response.ok) {
-                    let errMsg = `Erro da API (Status ${response.status})`;
-                    let errDetails = null;
-                    try {
-                        errDetails = await response.json();
-                        if (errDetails.error && errDetails.error.message) {
-                            errMsg = errDetails.error.message;
-                        }
-                        console.error(`[Gemini API] Detalhes do erro JSON (${response.status}):`, errDetails);
-                    } catch (e) {
-                        const rawText = await response.text();
-                        console.error(`[Gemini API] Detalhes do erro texto (${response.status}):`, rawText);
-                        errMsg = rawText || errMsg;
-                    }
-
-                    // Fallback automático de modelos no caso de 404
-                    if (response.status === 404 && cleanModel === "gemini-flash-latest") {
-                        console.warn("[Gemini API] gemini-flash-latest retornou 404. Tentando fallback para gemini-2.0-flash...");
-                        return await callGeminiApi(payload, "gemini-2.0-flash", suppressToast);
-                    }
-                    if (response.status === 404 && cleanModel === "gemini-2.0-flash") {
-                        console.warn("[Gemini API] gemini-2.0-flash retornou 404. Tentando fallback para gemini-1.5-flash-latest...");
-                        return await callGeminiApi(payload, "gemini-1.5-flash-latest", suppressToast);
-                    }
-
-                    if (!suppressToast) {
-                        if (response.status === 403) {
-                            showToast("Erro 403: API Key do Gemini inválida ou não autorizada.", "error");
-                            openConfigIAModal();
-                        } else if (response.status === 429) {
-                            showToast("Erro 429: Limite de cota do Gemini atingido.", "error");
-                        } else {
-                            showToast(`Erro na IA: ${errMsg}`, "error");
-                        }
-                    }
-                    throw new Error(errMsg);
-                }
-                
-                const data = await response.json();
-                console.log("[Gemini API] Dados recebidos com sucesso:", data);
-                return data;
-            } catch (err) {
-                console.error("[Gemini API] Erro na execução da chamada:", err);
-                throw err;
             }
+
+            const contents = [{ parts }];
+
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-goog-api-key': apiKey
+                },
+                body: JSON.stringify({ contents })
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                console.error("[Gemini API Error]", response.status, err);
+                throw new Error(err.error?.message || `HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
         }
 
         async function generateRecipesWithAI() {
@@ -1593,49 +1562,43 @@
                 return `- ${i.name} (Qtd: ${i.quantity} ${i.unit}, Categoria: ${i.category}, Validade: ${status.label})`;
             }).join('\n');
 
-            const systemPrompt = `Você é um Chef Profissional especializado em culinária doméstica sustentável e combate ao desperdício de alimentos. Sugira receitas com base nos ingredientes fornecidos.`;
+            const prompt = `Você é um Chef Profissional especializado em culinária doméstica sustentável e combate ao desperdício de alimentos.
+Confira o estoque atual da despensa:
+${inventoryList}
 
-            const userQuery = `Confira meu estoque da despensa compartilhada:\n${inventoryList}\n\nPreferências:\n- Refeição: ${mealType}\n- Foco: ${dietFocus}\n${customPrompt ? '- Pedido especial: ' + customPrompt : ''}\n\nGere 2 receitas criativas em formato JSON estruturado.`;
+Preferências do Usuário:
+- Tipo de refeição: ${mealType}
+- Foco dietético: ${dietFocus}
+${customPrompt ? '- Pedido especial: ' + customPrompt : ''}
 
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                "recipeTitle": { "type": "STRING" },
-                                "prepTime": { "type": "STRING" },
-                                "difficulty": { "type": "STRING" },
-                                "pantryIngredientsUsed": { "type": "ARRAY", "items": { "type": "STRING" } },
-                                "additionalIngredientsNeeded": { "type": "ARRAY", "items": { "type": "STRING" } },
-                                "instructions": { "type": "ARRAY", "items": { "type": "STRING" } },
-                                "chefTip": { "type": "STRING" }
-                            },
-                            "propertyOrdering": ["recipeTitle", "prepTime", "difficulty", "pantryIngredientsUsed", "additionalIngredientsNeeded", "instructions", "chefTip"]
-                        }
-                    }
-                }
-            };
+Crie 2 receitas criativas e práticas utilizando principalmente os ingredientes disponíveis.
+Retorne APENAS um JSON válido (sem comentários, sem crases de markdown como \`\`\`json) seguindo exatamente esta estrutura:
+[
+  {
+    "recipeTitle": "Nome da Receita",
+    "prepTime": "25 min",
+    "difficulty": "Fácil",
+    "pantryIngredientsUsed": ["Item 1", "Item 2"],
+    "additionalIngredientsNeeded": ["Sal", "Azeite"],
+    "instructions": ["Passo 1: ...", "Passo 2: ..."],
+    "chefTip": "Dica especial do chef"
+  }
+]`;
 
             try {
-                const result = await callGeminiApi(payload, "gemini-flash-latest");
+                const text = await callGeminiApi(prompt);
                 document.getElementById('ai-recipes-loading').classList.add('hidden');
 
-                const candidate = result?.candidates?.[0];
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    const recipes = JSON.parse(candidate.content.parts[0].text);
-                    renderRecipes(recipes);
-                } else {
-                    throw new Error('Falha ao processar receita');
-                }
+                let cleanText = text.trim();
+                if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
+                else if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
+
+                const recipes = JSON.parse(cleanText.trim());
+                renderRecipes(recipes);
             } catch (err) {
-                console.error(err);
+                console.error("[Chef IA] Erro:", err);
                 document.getElementById('ai-recipes-loading').classList.add('hidden');
-                showToast('Erro ao gerar receitas no momento.', 'error');
+                showToast(`Erro ao gerar receitas: ${err.message || 'Tente novamente.'}`, 'error');
             }
         }
 
@@ -1872,48 +1835,34 @@
             document.getElementById('scan-img-preview-container').classList.add('hidden');
             document.getElementById('scan-processing').classList.remove('hidden');
 
-            const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: "Identifique os produtos da imagem e extraia: nome, categoria (Grãos e Cereais, Laticínios e Frios, Conservas e Enlatados, Bebidas, Molhos e Condimentos, Hortifrúti, Padaria e Matinais, Produtos de Limpeza, Higiene Pessoal, Outros), quantidade, unidade (un, kg, g, L, ml, cx, pct), preço estimado." },
-                        { inlineData: { mimeType: "image/png", data: scannedBase64Image } }
-                    ]
-                }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                "name": { "type": "STRING" },
-                                "category": { "type": "STRING" },
-                                "quantity": { "type": "NUMBER" },
-                                "unit": { "type": "STRING" },
-                                "price": { "type": "NUMBER" }
-                            },
-                            "propertyOrdering": ["name", "category", "quantity", "unit", "price"]
-                        }
-                    }
-                }
-            };
+            const prompt = `Identifique todos os produtos de supermercado ou itens de nota fiscal presentes nesta imagem.
+Retorne APENAS um array JSON puro (sem explicações, sem crases markdown como \`\`\`json) com a estrutura:
+[
+  {
+    "name": "Nome do Produto",
+    "category": "Grãos e Cereais",
+    "quantity": 1,
+    "unit": "un",
+    "price": 10.50
+  }
+]
+Categorias permitidas: Grãos e Cereais, Laticínios e Frios, Conservas e Enlatados, Bebidas, Molhos e Condimentos, Hortifrúti, Padaria e Matinais, Produtos de Limpeza, Higiene Pessoal, Outros.
+Unidades permitidas: un, kg, g, L, ml, cx, pct.`;
 
             try {
-                const result = await callGeminiApi(payload, "gemini-flash-latest");
+                const text = await callGeminiApi(prompt, scannedBase64Image, scannedMimeType || "image/jpeg");
                 document.getElementById('scan-processing').classList.add('hidden');
 
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                    detectedScannedItems = JSON.parse(text);
-                    renderScannedResultsTable();
-                } else {
-                    throw new Error('Sem leitura');
-                }
+                let cleanText = text.trim();
+                if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
+                else if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
+
+                detectedScannedItems = JSON.parse(cleanText.trim());
+                renderScannedResultsTable();
             } catch (e) {
-                console.error(e);
+                console.error("[Scanner IA] Erro na leitura:", e);
                 document.getElementById('scan-processing').classList.add('hidden');
-                showToast('Erro ao ler a imagem. Tente outra foto.', 'error');
+                showToast(`Erro ao ler a imagem: ${e.message || 'Tente outra foto.'}`, 'error');
                 document.getElementById('scan-img-preview-container').classList.remove('hidden');
             }
         }
@@ -1993,11 +1942,9 @@
             }
 
             const prompt = `Dê 3 dicas curtas e práticas em tópicos sobre como conservar por mais tempo o item "${item.name}" (${item.category}) na cozinha.`;
-            const payload = { contents: [{ parts: [{ text: prompt }] }] };
 
             try {
-                const result = await callGeminiApi(payload, "gemini-flash-latest", true);
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                const text = await callGeminiApi(prompt);
                 if (text) {
                     document.getElementById('advice-content').innerHTML = `
                         <div class="space-y-3">
@@ -2008,7 +1955,7 @@
                         </div>
                     `;
                 } else {
-                    throw new Error('Resposta sem candidatos de texto válidos');
+                    throw new Error('Resposta sem texto');
                 }
             } catch (e) {
                 console.warn("[Dicas Conservação] Falha na chamada da API, ativando fallback offline:", e);
@@ -2134,16 +2081,40 @@
         window.closeConfigIAModal = closeConfigIAModal;
         window.saveGeminiKey = saveGeminiKey;
 
-        // On Load
-        window.onload = function() {
+        // Inicialização e vinculação de Event Listeners
+        function initializeApp() {
             const catFilter = document.getElementById('filter-category');
-            CATEGORIES.forEach(c => catFilter.innerHTML += `<option value="${c}">${c}</option>`);
+            if (catFilter && catFilter.options.length <= 1) {
+                CATEGORIES.forEach(c => catFilter.innerHTML += `<option value="${c}">${c}</option>`);
+            }
 
             const locFilter = document.getElementById('filter-location');
-            LOCATIONS.forEach(l => locFilter.innerHTML += `<option value="${l}">${l}</option>`);
+            if (locFilter && locFilter.options.length <= 1) {
+                LOCATIONS.forEach(l => locFilter.innerHTML += `<option value="${l}">${l}</option>`);
+            }
+
+            // Event Listeners explícitos para garantir funcionamento em qualquer contexto
+            const btnConfigIA = document.getElementById('btn-config-ia') || document.getElementById('btnConfigIA');
+            if (btnConfigIA) btnConfigIA.addEventListener('click', openConfigIAModal);
+
+            const btnScanIA = document.getElementById('btn-scan-ia') || document.getElementById('btnScanIA');
+            if (btnScanIA) btnScanIA.addEventListener('click', openScanModal);
+
+            const btnChefIA = document.getElementById('btn-generate-recipe') || document.getElementById('btnChefIA');
+            if (btnChefIA) btnChefIA.addEventListener('click', generateRecipesWithAI);
+
+            document.getElementById('btn-new-item')?.addEventListener('click', () => openModal());
+            document.getElementById('btn-export-csv')?.addEventListener('click', exportToCSV);
+            document.getElementById('btn-share-pantry')?.addEventListener('click', openShareModal);
 
             initAuthAndSync();
-        };
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
     </script>
 </body>
 </html>
