@@ -78,21 +78,21 @@
                 <!-- Bloco Direito: Perfil do Usuário e Botões de Ação -->
                 <div class="app-header-actions flex items-center justify-start sm:justify-end gap-2 flex-wrap">
                     <div id="auth-container" class="flex items-center gap-2 flex-shrink-0 mr-1"></div>
-                    <button onclick="openConfigIAModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Configurar Gemini API Key" id="btn-config-ia">
+                    <button onclick="openConfigIAModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Configurar Gemini API Key" id="btnConfigIA">
                         <span>⚙️ Configurar IA</span>
                     </button>
-                    <button onclick="openShareModal()" class="bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-300 hover:border-indigo-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs" title="Compartilhar lista com família" id="btn-share-pantry">
+                    <button onclick="openShareModal()" class="bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-300 hover:border-indigo-300 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-xs" title="Compartilhar lista com família" id="btnSharePantry">
                         <i class="fa-solid fa-users text-indigo-600"></i>
                         <span class="hidden sm:inline">Despensa:</span>
                         <span id="header-pantry-code" class="font-mono bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-900 font-bold">...</span>
                     </button>
-                    <button onclick="openScanModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" title="Escanear produto com IA" id="btn-scan-ia">
+                    <button onclick="openScanModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" title="Escanear produto com IA" id="btnScanIA">
                         <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> <span>Escanear IA</span>
                     </button>
-                    <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" id="btn-new-item">
+                    <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap" id="btnNewItem">
                         <i class="fa-solid fa-plus"></i> <span>Novo Item</span>
                     </button>
-                    <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Exportar para CSV / Excel" id="btn-export-csv">
+                    <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition border border-slate-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-xs" title="Exportar para CSV / Excel" id="btnExportCSV">
                         <i class="fa-solid fa-file-csv text-emerald-600"></i> <span class="hidden sm:inline">Exportar</span>
                     </button>
                 </div>
@@ -330,7 +330,7 @@
                         <input type="text" id="ai-custom-prompt" placeholder="Ex: Usar molho de tomate e queijo..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     </div>
 
-                    <button onclick="generateRecipesWithAI()" id="btn-generate-recipe" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer">
+                    <button onclick="generateRecipesWithAI()" id="btnChefGenerate" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Gerar Sugestões de Receita
                     </button>
                 </div>
@@ -467,7 +467,7 @@
                 <!-- Preview Image -->
                 <div id="scan-img-preview-container" class="hidden text-center space-y-3">
                     <img id="scan-img-preview" class="max-h-48 mx-auto rounded-lg border border-slate-200 shadow-sm object-contain" alt="Preview da Imagem">
-                    <button onclick="processImageWithAI()" id="btn-process-image" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer">
+                    <button onclick="processImageWithAI()" id="btnSubmitScan" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm transition flex items-center justify-center gap-2 text-sm cursor-pointer">
                         <i class="fa-solid fa-robot"></i> Analisar Imagem com Gemini
                     </button>
                 </div>
@@ -820,11 +820,14 @@
 
         function checkGeminiKey() {
             if (!GEMINI_API_KEY) {
+                GEMINI_API_KEY = (localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY).trim();
+            }
+            if (!GEMINI_API_KEY) {
                 showToast('Configuração de IA necessária!', 'info');
                 openConfigIAModal();
                 return false;
             }
-            return True;
+            return true;
         }
 
         async function loginWithGoogle() {
@@ -1509,37 +1512,47 @@
 
         async function callGeminiApi(promptText, base64Image = null, mimeType = "image/jpeg") {
             const apiKey = (localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY).trim();
-            
-            const parts = [{ text: promptText }];
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
 
+            const parts = [{ text: promptText }];
             if (base64Image) {
+                const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
                 parts.push({
                     inline_data: {
                         mime_type: mimeType,
-                        data: base64Image
+                        data: cleanBase64
                     }
                 });
             }
 
-            const contents = [{ parts }];
+            try {
+                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent', {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-goog-api-key': apiKey
+                    },
+                    body: JSON.stringify({ contents: [{ parts }] })
+                });
 
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-goog-api-key': apiKey
-                },
-                body: JSON.stringify({ contents })
-            });
+                clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                console.error("[Gemini API Error]", response.status, err);
-                throw new Error(err.error?.message || `HTTP ${response.status}`);
+                if (!response.ok) {
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson.error?.message || `Erro HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!textResponse) throw new Error("Resposta vazia da IA.");
+                return textResponse;
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.error("Falha na chamada Gemini API:", err);
+                throw err;
             }
-
-            const data = await response.json();
-            return data.candidates[0].content.parts[0].text;
         }
 
         async function generateRecipesWithAI() {
@@ -1549,13 +1562,17 @@
                 return;
             }
 
-            const mealType = document.getElementById('ai-meal-type').value;
-            const dietFocus = document.getElementById('ai-diet-focus').value;
-            const customPrompt = document.getElementById('ai-custom-prompt').value.trim();
+            const mealType = document.getElementById('ai-meal-type')?.value || 'Qualquer';
+            const dietFocus = document.getElementById('ai-diet-focus')?.value || 'Sem restrições';
+            const customPrompt = document.getElementById('ai-custom-prompt')?.value?.trim() || '';
 
-            document.getElementById('ai-recipes-empty').classList.add('hidden');
-            document.getElementById('ai-recipes-container').innerHTML = '';
-            document.getElementById('ai-recipes-loading').classList.remove('hidden');
+            const emptyEl = document.getElementById('ai-recipes-empty');
+            const containerEl = document.getElementById('ai-recipes-container');
+            const loadingEl = document.getElementById('ai-recipes-loading');
+
+            if (emptyEl) emptyEl.classList.add('hidden');
+            if (containerEl) containerEl.innerHTML = '';
+            if (loadingEl) loadingEl.classList.remove('hidden');
 
             const inventoryList = pantryItems.map(i => {
                 const status = getItemStatus(i);
@@ -1587,8 +1604,6 @@ Retorne APENAS um JSON válido (sem comentários, sem crases de markdown como \`
 
             try {
                 const text = await callGeminiApi(prompt);
-                document.getElementById('ai-recipes-loading').classList.add('hidden');
-
                 let cleanText = text.trim();
                 if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
                 else if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
@@ -1597,8 +1612,10 @@ Retorne APENAS um JSON válido (sem comentários, sem crases de markdown como \`
                 renderRecipes(recipes);
             } catch (err) {
                 console.error("[Chef IA] Erro:", err);
-                document.getElementById('ai-recipes-loading').classList.add('hidden');
                 showToast(`Erro ao gerar receitas: ${err.message || 'Tente novamente.'}`, 'error');
+                if (emptyEl) emptyEl.classList.remove('hidden');
+            } finally {
+                if (loadingEl) loadingEl.classList.add('hidden');
             }
         }
 
@@ -1813,27 +1830,40 @@ Retorne APENAS um JSON válido (sem comentários, sem crases de markdown como \`
             document.getElementById('scan-results-container').classList.add('hidden');
         }
 
+        let scannedMimeType = "image/jpeg";
+
         function handleImageScan(e) {
             const file = e.target.files[0];
             if (!file) return;
 
+            scannedMimeType = file.type || "image/jpeg";
             const reader = new FileReader();
             reader.onload = function(evt) {
                 const dataUrl = evt.target.result;
-                scannedBase64Image = dataUrl.split(',')[1];
+                scannedBase64Image = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
                 
-                document.getElementById('scan-img-preview').src = dataUrl;
-                document.getElementById('scan-dropzone').classList.add('hidden');
-                document.getElementById('scan-img-preview-container').classList.remove('hidden');
+                const previewImg = document.getElementById('scan-img-preview');
+                if (previewImg) previewImg.src = dataUrl;
+                
+                document.getElementById('scan-dropzone')?.classList.add('hidden');
+                document.getElementById('scan-img-preview-container')?.classList.remove('hidden');
             };
             reader.readAsDataURL(file);
         }
 
         async function processImageWithAI() {
-            if (!scannedBase64Image) return;
+            if (!scannedBase64Image) {
+                showToast("Selecione uma imagem primeiro.", "error");
+                return;
+            }
 
-            document.getElementById('scan-img-preview-container').classList.add('hidden');
-            document.getElementById('scan-processing').classList.remove('hidden');
+            const previewContainer = document.getElementById('scan-img-preview-container');
+            const processingContainer = document.getElementById('scan-processing');
+            const resultsContainer = document.getElementById('scan-results-container');
+
+            if (previewContainer) previewContainer.classList.add('hidden');
+            if (resultsContainer) resultsContainer.classList.add('hidden');
+            if (processingContainer) processingContainer.classList.remove('hidden');
 
             const prompt = `Identifique todos os produtos de supermercado ou itens de nota fiscal presentes nesta imagem.
 Retorne APENAS um array JSON puro (sem explicações, sem crases markdown como \`\`\`json) com a estrutura:
@@ -1851,19 +1881,21 @@ Unidades permitidas: un, kg, g, L, ml, cx, pct.`;
 
             try {
                 const text = await callGeminiApi(prompt, scannedBase64Image, scannedMimeType || "image/jpeg");
-                document.getElementById('scan-processing').classList.add('hidden');
-
                 let cleanText = text.trim();
                 if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
                 else if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
 
                 detectedScannedItems = JSON.parse(cleanText.trim());
+                if (!Array.isArray(detectedScannedItems) || detectedScannedItems.length === 0) {
+                    throw new Error("Nenhum item detectado na imagem.");
+                }
                 renderScannedResultsTable();
             } catch (e) {
                 console.error("[Scanner IA] Erro na leitura:", e);
-                document.getElementById('scan-processing').classList.add('hidden');
-                showToast(`Erro ao ler a imagem: ${e.message || 'Tente outra foto.'}`, 'error');
-                document.getElementById('scan-img-preview-container').classList.remove('hidden');
+                showToast(`Erro ao ler imagem: ${e.message || 'Tente outra foto.'}`, 'error');
+                if (previewContainer) previewContainer.classList.remove('hidden');
+            } finally {
+                if (processingContainer) processingContainer.classList.add('hidden');
             }
         }
 
@@ -1911,11 +1943,21 @@ Unidades permitidas: un, kg, g, L, ml, cx, pct.`;
         }
 
         async function getConservationTips(itemId) {
-            const item = pantryItems.find(i => i.id === itemId);
-            if (!item) return;
+            let item = null;
+            if (typeof itemId === 'object' && itemId !== null) {
+                item = itemId;
+            } else if (typeof itemId === 'string') {
+                item = pantryItems.find(i => i.id === itemId) || { name: itemId, category: 'Alimentos' };
+            } else {
+                item = pantryItems[0] || { name: 'Item', category: 'Alimentos' };
+            }
 
-            document.getElementById('advice-item-title').innerText = `Dicas de Conservação: ${item.name}`;
-            document.getElementById('advice-modal').classList.remove('hidden');
+            const modal = document.getElementById('advice-modal') || document.getElementById('modalAdvice');
+            const titleEl = document.getElementById('advice-item-title');
+            const contentEl = document.getElementById('advice-content');
+
+            if (titleEl) titleEl.innerText = `Dicas de Conservação: ${item.name}`;
+            if (modal) modal.classList.remove('hidden');
 
             const fallbackTips = getFallbackTips(item.name);
             const fallbackHtml = `
@@ -1927,39 +1969,42 @@ Unidades permitidas: un, kg, g, L, ml, cx, pct.`;
                 </p>
             `;
 
-            document.getElementById('advice-content').innerHTML = `
-                <div class="py-6 text-center space-y-2">
-                    <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-amber-600 border-t-transparent"></div>
-                    <p class="text-xs text-slate-500">Buscando dicas com a IA...</p>
-                </div>
-            `;
-
-            const apiKey = (localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY).trim();
-            if (!apiKey) {
-                console.warn("[Dicas Conservação] Chave API não configurada. Usando fallback offline.");
-                document.getElementById('advice-content').innerHTML = fallbackHtml;
-                return;
+            // a) Exibe o container de carregamento com spinner
+            if (contentEl) {
+                contentEl.innerHTML = `
+                    <div id="advice-spinner-box" class="py-6 text-center space-y-2">
+                        <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-amber-600 border-t-transparent"></div>
+                        <p class="text-xs text-slate-500">Buscando dicas com a IA...</p>
+                    </div>
+                `;
             }
 
-            const prompt = `Dê 3 dicas curtas e práticas em tópicos sobre como conservar por mais tempo o item "${item.name}" (${item.category}) na cozinha.`;
+            const prompt = `Dê 3 dicas curtas e práticas em tópicos sobre como conservar por mais tempo o item "${item.name}" (${item.category || 'Alimentos'}) na cozinha.`;
+            let aiTipText = null;
 
             try {
                 const text = await callGeminiApi(prompt);
-                if (text) {
-                    document.getElementById('advice-content').innerHTML = `
-                        <div class="space-y-3">
-                            <p class="whitespace-pre-line text-slate-700 leading-relaxed">${text}</p>
-                            <p class="text-[11px] text-indigo-600 mt-2 font-medium flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md w-fit">
-                                <i class="fa-solid fa-sparkles text-amber-500"></i> ✨ Dica gerada por IA
-                            </p>
-                        </div>
-                    `;
-                } else {
-                    throw new Error('Resposta sem texto');
+                if (text && text.trim().length > 0) {
+                    aiTipText = text.trim();
                 }
             } catch (e) {
                 console.warn("[Dicas Conservação] Falha na chamada da API, ativando fallback offline:", e);
-                document.getElementById('advice-content').innerHTML = fallbackHtml;
+            } finally {
+                // b & c) O bloco finally SEMPRE remove o spinner e exibe a dica da IA ou o fallback
+                if (contentEl) {
+                    if (aiTipText) {
+                        contentEl.innerHTML = `
+                            <div class="space-y-3">
+                                <p class="whitespace-pre-line text-slate-700 leading-relaxed">${aiTipText}</p>
+                                <p class="text-[11px] text-indigo-600 mt-2 font-medium flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-md w-fit">
+                                    <i class="fa-solid fa-sparkles text-amber-500"></i> ✨ Dica gerada por IA
+                                </p>
+                            </div>
+                        `;
+                    } else {
+                        contentEl.innerHTML = fallbackHtml;
+                    }
+                }
             }
         }
 
@@ -2080,6 +2125,8 @@ Unidades permitidas: un, kg, g, L, ml, cx, pct.`;
         window.openConfigIAModal = openConfigIAModal;
         window.closeConfigIAModal = closeConfigIAModal;
         window.saveGeminiKey = saveGeminiKey;
+        window.openTipsModal = getConservationTips;
+        window.callGeminiApi = callGeminiApi;
 
         // Inicialização e vinculação de Event Listeners
         function initializeApp() {
@@ -2094,18 +2141,26 @@ Unidades permitidas: un, kg, g, L, ml, cx, pct.`;
             }
 
             // Event Listeners explícitos para garantir funcionamento em qualquer contexto
-            const btnConfigIA = document.getElementById('btn-config-ia') || document.getElementById('btnConfigIA');
-            if (btnConfigIA) btnConfigIA.addEventListener('click', openConfigIAModal);
+            const configBtns = [document.getElementById('btnConfigIA'), document.getElementById('btn-config-ia')];
+            configBtns.forEach(btn => btn?.addEventListener('click', openConfigIAModal));
 
-            const btnScanIA = document.getElementById('btn-scan-ia') || document.getElementById('btnScanIA');
-            if (btnScanIA) btnScanIA.addEventListener('click', openScanModal);
+            const scanBtns = [document.getElementById('btnScanIA'), document.getElementById('btn-scan-ia')];
+            scanBtns.forEach(btn => btn?.addEventListener('click', openScanModal));
 
-            const btnChefIA = document.getElementById('btn-generate-recipe') || document.getElementById('btnChefIA');
-            if (btnChefIA) btnChefIA.addEventListener('click', generateRecipesWithAI);
+            const submitScanBtns = [document.getElementById('btnSubmitScan'), document.getElementById('btn-process-image')];
+            submitScanBtns.forEach(btn => btn?.addEventListener('click', processImageWithAI));
 
-            document.getElementById('btn-new-item')?.addEventListener('click', () => openModal());
-            document.getElementById('btn-export-csv')?.addEventListener('click', exportToCSV);
-            document.getElementById('btn-share-pantry')?.addEventListener('click', openShareModal);
+            const chefBtns = [document.getElementById('btnChefGenerate'), document.getElementById('btnChefIA'), document.getElementById('btn-generate-recipe')];
+            chefBtns.forEach(btn => btn?.addEventListener('click', generateRecipesWithAI));
+
+            const newItemBtns = [document.getElementById('btnNewItem'), document.getElementById('btn-new-item')];
+            newItemBtns.forEach(btn => btn?.addEventListener('click', () => openModal()));
+
+            const exportBtns = [document.getElementById('btnExportCSV'), document.getElementById('btn-export-csv')];
+            exportBtns.forEach(btn => btn?.addEventListener('click', exportToCSV));
+
+            const shareBtns = [document.getElementById('btnSharePantry'), document.getElementById('btn-share-pantry')];
+            shareBtns.forEach(btn => btn?.addEventListener('click', openShareModal));
 
             initAuthAndSync();
         }
