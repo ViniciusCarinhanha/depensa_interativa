@@ -342,13 +342,13 @@
         </section>
     </main>
 
-    <!-- MODAL: CONFIGURAR IA -->
+    <!-- MODAL: CONFIGURAR IA (BYOK) -->
     <div id="config-ia-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <span class="text-lg">⚙️</span>
-                    <h3 class="font-bold text-base">Configurar Gemini API</h3>
+                    <h3 class="font-bold text-base">Configurar Gemini API (BYOK)</h3>
                 </div>
                 <button onclick="closeConfigIAModal()" class="text-slate-400 hover:text-white text-lg p-1 cursor-pointer">
                     <i class="fa-solid fa-xmark"></i>
@@ -356,15 +356,30 @@
             </div>
             <div class="p-6 space-y-4">
                 <p class="text-xs text-slate-600 leading-relaxed">
-                    Insira sua chave do Google AI Studio para ativar as funcionalidades de visão computacional, dicas personalizadas e receitas.
+                    Insira sua chave própria (Bring Your Own Key) do Google Gemini. A chave é sincronizada de forma segura na sua conta Google no Firestore.
                 </p>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">API Key do Google Gemini</label>
-                    <input type="password" id="gemini-key-input" placeholder="AIzaSy..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase">API Key do Google Gemini</label>
+                    <div class="relative">
+                        <input type="password" id="gemini-key-input" placeholder="Cole sua chave aqui (AIza... ou AQ...)" class="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button type="button" onclick="toggleGeminiKeyVisibility()" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm p-1 cursor-pointer" title="Mostrar/Ocultar chave">
+                            <i id="gemini-key-eye-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold mt-1">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Obter chave gratuita no Google AI Studio
+                    </a>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button onclick="closeConfigIAModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">Cancelar</button>
-                    <button onclick="saveGeminiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer">Salvar Chave</button>
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="removeGeminiKey()" id="btnRemoveGeminiKey" class="px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1 border border-rose-200">
+                        <i class="fa-solid fa-trash-can text-xs"></i> Remover Chave
+                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" onclick="closeConfigIAModal()" class="px-3.5 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">Cancelar</button>
+                        <button type="button" onclick="saveGeminiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-cloud-arrow-up text-xs"></i> Salvar Chave
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -538,7 +553,7 @@
     <script type="module">
         import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase Configuration (controle-de-despensa-2)
         const firebaseConfig = {
@@ -566,16 +581,8 @@
             console.warn("Inicialização do Firebase em modo offline:", e);
         }
 
-        // Gemini API Configuration
-        const _k1 = 'AQ.Ab8RN6';
-        const _k2 = 'JA0DAzBGgzi';
-        const _k3 = 'ULMZ7W-L9ycnRCt_';
-        const _k4 = 'E7O_fGZF1DucfsLtg';
-        const DEFAULT_GEMINI_KEY = _k1 + _k2 + _k3 + _k4;
-
-        if (!localStorage.getItem('gemini_api_key')) {
-            localStorage.setItem('gemini_api_key', DEFAULT_GEMINI_KEY);
-        }
+        // Variável global de sessão para a chave da IA (BYOK)
+        let activeApiKey = null;
 
         // Modelos com prioridade de execução (gemini-2.0-flash com fallback)
         const GEMINI_MODELS = [
@@ -652,7 +659,11 @@
 
         // Universal Gemini API Caller com suporte a chaves AQ (query param + header) e Fallback de Modelos
         async function callGeminiApi(promptText, base64Image = null, mimeType = "image/jpeg") {
-            const apiKey = (localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY).trim();
+            const apiKey = (activeApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+
+            if (!apiKey) {
+                throw new Error("NO_API_KEY");
+            }
 
             const parts = [{ text: promptText }];
             if (base64Image) {
@@ -713,6 +724,7 @@
                     currentUser = result.user;
                     updateAuthUI(result.user);
                     setupRealtimeListener();
+                    await syncUserGeminiSettings(result.user);
                 }
                 showToast("Login realizado com sucesso!", "success");
             } catch (error) {
@@ -735,6 +747,7 @@
             try {
                 await signOut(auth);
                 currentUser = null;
+                activeApiKey = null;
                 if (unsubscribeSnapshot) {
                     unsubscribeSnapshot();
                     unsubscribeSnapshot = null;
@@ -807,6 +820,29 @@
             renderAll();
         }
 
+        async function syncUserGeminiSettings(user) {
+            if (!user || !db) return;
+            try {
+                const geminiDocRef = doc(db, 'users', user.uid, 'settings', 'gemini');
+                const docSnap = await getDoc(geminiDocRef);
+                if (docSnap.exists() && docSnap.data()?.apiKey) {
+                    activeApiKey = docSnap.data().apiKey.trim();
+                    localStorage.setItem('gemini_api_key', activeApiKey);
+                } else {
+                    const localKey = (localStorage.getItem('gemini_api_key') || '').trim();
+                    if (localKey) {
+                        activeApiKey = localKey;
+                        await setDoc(geminiDocRef, {
+                            apiKey: localKey,
+                            updatedAt: new Date().toISOString()
+                        }, { merge: true });
+                    }
+                }
+            } catch (e) {
+                console.warn("Erro ao sincronizar configurações do Gemini no Firestore:", e);
+            }
+        }
+
         function initAuthAndSync() {
             if (!auth) {
                 updateAuthUI(null);
@@ -815,11 +851,12 @@
             }
 
             // Check if returning from a redirect sign-in
-            getRedirectResult(auth).then((result) => {
+            getRedirectResult(auth).then(async (result) => {
                 if (result && result.user) {
                     currentUser = result.user;
                     updateAuthUI(result.user);
                     setupRealtimeListener();
+                    await syncUserGeminiSettings(result.user);
                     showToast("Login realizado com sucesso!", "success");
                 }
             }).catch((error) => {
@@ -828,13 +865,15 @@
                 }
             });
 
-            onAuthStateChanged(auth, (user) => {
+            onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     currentUser = user;
                     updateAuthUI(user);
                     setupRealtimeListener();
+                    await syncUserGeminiSettings(user);
                 } else {
                     currentUser = null;
+                    activeApiKey = null;
                     if (unsubscribeSnapshot) {
                         unsubscribeSnapshot();
                         unsubscribeSnapshot = null;
@@ -1179,9 +1218,37 @@
             showToast(id ? 'Item atualizado com sucesso!' : 'Novo item adicionado!', 'success');
         }
 
+        function toggleGeminiKeyVisibility() {
+            const input = document.getElementById('gemini-key-input');
+            const icon = document.getElementById('gemini-key-eye-icon');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                if (icon) icon.className = 'fa-solid fa-eye';
+            }
+        }
+
         function openConfigIAModal() {
-            const key = localStorage.getItem('gemini_api_key') || DEFAULT_GEMINI_KEY;
-            document.getElementById('gemini-key-input').value = key;
+            const currentKey = activeApiKey || localStorage.getItem('gemini_api_key') || '';
+            const input = document.getElementById('gemini-key-input');
+            if (input) {
+                input.value = currentKey;
+                input.type = 'password';
+            }
+            const icon = document.getElementById('gemini-key-eye-icon');
+            if (icon) icon.className = 'fa-solid fa-eye';
+
+            const btnRemove = document.getElementById('btnRemoveGeminiKey');
+            if (btnRemove) {
+                if (currentKey) {
+                    btnRemove.classList.remove('hidden');
+                } else {
+                    btnRemove.classList.add('hidden');
+                }
+            }
             document.getElementById('config-ia-modal').classList.remove('hidden');
         }
 
@@ -1189,15 +1256,51 @@
             document.getElementById('config-ia-modal').classList.add('hidden');
         }
 
-        function saveGeminiKey() {
-            const key = document.getElementById('gemini-key-input').value.trim();
+        async function saveGeminiKey() {
+            const input = document.getElementById('gemini-key-input');
+            const key = input ? input.value.trim() : '';
             if (!key) {
-                showToast("A chave não pode ficar vazia.", "error");
+                showToast("Por favor, insira uma chave de API válida.", "error");
                 return;
             }
+
+            activeApiKey = key;
             localStorage.setItem('gemini_api_key', key);
+
+            if (currentUser && db) {
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid, 'settings', 'gemini'), {
+                        apiKey: key,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                    showToast("Chave sincronizada com sua conta Google com sucesso!", "success");
+                } catch (e) {
+                    console.error("Erro ao sincronizar chave no Firestore:", e);
+                    showToast("Chave salva localmente no navegador!", "info");
+                }
+            } else {
+                showToast("Chave salva localmente no navegador!", "success");
+            }
+
             closeConfigIAModal();
-            showToast("Chave da IA salva com sucesso!", "success");
+        }
+
+        async function removeGeminiKey() {
+            activeApiKey = null;
+            localStorage.removeItem('gemini_api_key');
+            const input = document.getElementById('gemini-key-input');
+            if (input) input.value = '';
+
+            if (currentUser && db) {
+                try {
+                    await deleteDoc(doc(db, 'users', currentUser.uid, 'settings', 'gemini'));
+                } catch (e) {
+                    console.error("Erro ao remover chave do Firestore:", e);
+                }
+            }
+
+            closeConfigIAModal();
+            showToast("Chave da IA removida.", "info");
         }
 
         // Dicas de Conservação
@@ -1217,10 +1320,16 @@
                 <ul class="list-disc pl-5 space-y-1.5 text-slate-700">
                     ${fallbackList.map(t => `<li>${t}</li>`).join('')}
                 </ul>
-                <p class="text-[11px] text-slate-400 mt-3 italic flex items-center gap-1">
-                    <i class="fa-solid fa-database"></i> Dicas baseadas no guia prático de conservação.
+                <p class="text-[11px] text-amber-700 mt-3 flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md w-fit">
+                    <i class="fa-solid fa-cloud-slash"></i> Exibindo dicas offline
                 </p>
             `;
+
+            const currentKey = (activeApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+            if (!currentKey) {
+                content.innerHTML = fallbackHtml;
+                return;
+            }
 
             content.innerHTML = `
                 <div class="py-6 text-center space-y-2">
@@ -1299,6 +1408,13 @@
         async function processImageWithAI() {
             if (!scannedBase64Image) {
                 showToast("Selecione uma imagem primeiro.", "error");
+                return;
+            }
+
+            const currentKey = (activeApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+            if (!currentKey) {
+                openConfigIAModal();
+                showToast("Configure sua chave de API para usar este recurso.", "info");
                 return;
             }
 
@@ -1382,6 +1498,13 @@ Categorias válidas: Grãos e Cereais, Laticínios e Frios, Carnes e Aves, Conse
         async function generateRecipesWithAI() {
             if (pantryItems.length === 0) {
                 showToast('Sua despensa está vazia! Adicione itens primeiro.', 'error');
+                return;
+            }
+
+            const currentKey = (activeApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+            if (!currentKey) {
+                openConfigIAModal();
+                showToast("Configure sua chave de API para usar este recurso.", "info");
                 return;
             }
 
@@ -1634,6 +1757,8 @@ Retorne APENAS um JSON puro no formato:
         window.openConfigIAModal = openConfigIAModal;
         window.closeConfigIAModal = closeConfigIAModal;
         window.saveGeminiKey = saveGeminiKey;
+        window.removeGeminiKey = removeGeminiKey;
+        window.toggleGeminiKeyVisibility = toggleGeminiKeyVisibility;
         window.callGeminiApi = callGeminiApi;
 
         // Initialization
