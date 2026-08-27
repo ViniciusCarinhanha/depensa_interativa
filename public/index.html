@@ -1966,55 +1966,67 @@
         // CRUD DE PRODUTOS COM SUPORTE A HISTÓRICO DE PREÇOS
         // =========================================================================
         async function savePantryItem(itemData) {
-            // Processar e registrar histórico de preços
-            const today = new Date().toISOString().split('T')[0];
-            const priceNum = parseFloat(itemData.price) || 0;
-            
-            let history = Array.isArray(itemData.priceHistory) ? [...itemData.priceHistory] : [];
-            if (priceNum > 0) {
-                if (history.length === 0) {
-                    history.push({ date: today, price: priceNum });
-                } else {
-                    const lastEntry = history[history.length - 1];
-                    if (lastEntry.date === today) {
-                        lastEntry.price = priceNum;
-                    } else if (lastEntry.price !== priceNum) {
+            try {
+                // Processar e registrar histórico de preços
+                const today = new Date().toISOString().split('T')[0];
+                const priceNum = parseFloat(itemData.price) || 0;
+                
+                let history = Array.isArray(itemData.priceHistory) ? [...itemData.priceHistory] : [];
+                if (priceNum > 0) {
+                    if (history.length === 0) {
                         history.push({ date: today, price: priceNum });
+                    } else {
+                        const lastEntry = history[history.length - 1];
+                        if (lastEntry.date === today) {
+                            lastEntry.price = priceNum;
+                        } else if (lastEntry.price !== priceNum) {
+                            history.push({ date: today, price: priceNum });
+                        }
                     }
                 }
-            }
-            itemData.priceHistory = history;
+                itemData.priceHistory = history;
 
-            // Garantir que nova categoria do item seja registrada no sistema
-            if (itemData.category) {
-                const cats = getAvailableCategories();
-                if (!cats.includes(itemData.category)) {
-                    customCategories.push(itemData.category);
-                    localStorage.setItem('user_custom_categories', JSON.stringify(customCategories));
-                    populateCategorySelects(itemData.category);
+                // Garantir que nova categoria do item seja registrada no sistema
+                if (itemData.category) {
+                    const cats = getAvailableCategories();
+                    if (!cats.includes(itemData.category)) {
+                        customCategories.push(itemData.category);
+                        localStorage.setItem('user_custom_categories', JSON.stringify(customCategories));
+                        populateCategorySelects(itemData.category);
+                    }
                 }
-            }
 
-            if (currentUser && db && currentPantryId) {
-                const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
-                const docRef = itemData.id && !itemData.id.startsWith('local_') && !itemData.id.startsWith('sample-') ? doc(itemsCol, itemData.id) : doc(itemsCol);
-                const finalData = {
-                    ...itemData,
-                    id: docRef.id,
-                    updatedAt: new Date().toISOString()
-                };
-                await setDoc(docRef, finalData, { merge: true });
-            } else {
-                if (itemData.id) {
-                    const idx = pantryItems.findIndex(i => i.id === itemData.id);
-                    if (idx >= 0) pantryItems[idx] = itemData;
-                    else pantryItems.unshift(itemData);
+                // Gerar ID seguro se for um novo item
+                if (!itemData.id) {
+                    itemData.id = 'item_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+                }
+
+                itemData.updatedAt = new Date().toISOString();
+
+                // 1. Atualização Otimista Imediata na Memória e no Cache Local
+                const idx = pantryItems.findIndex(i => i.id === itemData.id);
+                if (idx >= 0) {
+                    pantryItems[idx] = { ...pantryItems[idx], ...itemData };
                 } else {
-                    itemData.id = 'local_' + Date.now();
-                    pantryItems.unshift(itemData);
+                    pantryItems.unshift({ ...itemData });
                 }
                 localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
                 renderAll();
+
+                // 2. Sincronização com Firestore (se online)
+                if (currentUser && db && currentPantryId) {
+                    try {
+                        const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
+                        const docRef = doc(itemsCol, itemData.id);
+                        await setDoc(docRef, itemData, { merge: true });
+                    } catch (firestoreErr) {
+                        console.warn("Aviso na sincronização do item no Firestore:", firestoreErr);
+                    }
+                }
+                return true;
+            } catch (err) {
+                console.error("Erro em savePantryItem:", err);
+                throw err;
             }
         }
 
@@ -2348,26 +2360,60 @@
         }
 
         async function handleSaveItem(e) {
-            e.preventDefault();
-            const id = document.getElementById('form-item-id').value;
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            const nameInput = document.getElementById('form-name');
+            const catInput = document.getElementById('form-category');
+            const locInput = document.getElementById('form-location');
+            const qtyInput = document.getElementById('form-quantity');
+            const unitInput = document.getElementById('form-unit');
+            const minQtyInput = document.getElementById('form-min-quantity');
+            const expInput = document.getElementById('form-expiry');
+            const priceInput = document.getElementById('form-price');
+            const idInput = document.getElementById('form-item-id');
+
+            const name = (nameInput?.value || '').trim();
+            if (!name) {
+                showToast("Por favor, preencha o nome do item.", "error");
+                nameInput?.focus();
+                return;
+            }
+
+            const id = idInput?.value || null;
             const existingItem = id ? pantryItems.find(i => i.id === id) : null;
-            
+
+            const category = catInput?.value || 'Outros';
+            const location = locInput?.value || 'Armário Principal';
+            const quantity = parseInt(qtyInput?.value) >= 0 ? parseInt(qtyInput.value) : 1;
+            const unit = unitInput?.value || 'un';
+            const minQuantity = parseInt(minQtyInput?.value) >= 0 ? parseInt(minQtyInput.value) : 1;
+            const expiry = expInput?.value || getRelativeDate(30);
+            const price = parseFloat(priceInput?.value) || 0;
+
             const itemData = {
-                id: id || null,
-                name: document.getElementById('form-name').value.trim(),
-                category: document.getElementById('form-category').value,
-                location: document.getElementById('form-location').value,
-                quantity: parseInt(document.getElementById('form-quantity').value) || 0,
-                unit: document.getElementById('form-unit').value,
-                minQuantity: parseInt(document.getElementById('form-min-quantity').value) || 0,
-                expiry: document.getElementById('form-expiry').value,
-                price: parseFloat(document.getElementById('form-price').value) || 0,
+                id: id,
+                name: name,
+                category: category,
+                location: location,
+                quantity: quantity,
+                unit: unit,
+                minQuantity: minQuantity,
+                expiry: expiry,
+                price: price,
                 priceHistory: existingItem && Array.isArray(existingItem.priceHistory) ? existingItem.priceHistory : []
             };
 
-            await savePantryItem(itemData);
-            closeModal();
-            showToast(id ? 'Item atualizado com sucesso!' : 'Novo item adicionado!', 'success');
+            try {
+                await savePantryItem(itemData);
+                closeModal();
+                showToast(id ? 'Item atualizado com sucesso!' : 'Novo item adicionado com sucesso!', 'success');
+            } catch (err) {
+                console.error("Erro ao salvar item:", err);
+                showToast("Erro ao salvar item: " + (err.message || "Tente novamente"), "error");
+            }
         }
 
         function toggleGeminiKeyVisibility() {
@@ -2970,6 +3016,10 @@ Retorne APENAS um JSON puro no formato:
             document.getElementById('btnChefGenerate')?.addEventListener('click', generateRecipesWithAI);
             document.getElementById('btnNewItem')?.addEventListener('click', () => openModal());
             document.getElementById('btnExportCSV')?.addEventListener('click', exportToCSV);
+            document.getElementById('item-form')?.addEventListener('submit', handleSaveItem);
+            document.getElementById('price-history-form')?.addEventListener('submit', handleAddPriceHistoryEntry);
+            document.getElementById('create-pantry-form')?.addEventListener('submit', handleCreatePantry);
+            document.getElementById('join-pantry-form')?.addEventListener('submit', handleJoinPantry);
 
             document.getElementById('tab-btn-pantry')?.addEventListener('click', () => switchTab('pantry'));
             document.getElementById('tab-btn-shopping')?.addEventListener('click', () => switchTab('shopping'));
