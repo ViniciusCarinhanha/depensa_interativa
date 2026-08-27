@@ -1764,10 +1764,57 @@
             window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
         }
 
+        let unsubscribePantriesSnapshot = null;
+
+        function setupPantriesRealtimeListener() {
+            if (unsubscribePantriesSnapshot) {
+                unsubscribePantriesSnapshot();
+                unsubscribePantriesSnapshot = null;
+            }
+            if (!currentUser || !db) return;
+
+            try {
+                // Escutar mudanças no perfil do usuário (ex: troca de despensa ativa no outro dispositivo)
+                onSnapshot(doc(db, 'users', currentUser.uid), (userDoc) => {
+                    if (userDoc.exists() && userDoc.data()?.activePantryId) {
+                        const newActiveId = userDoc.data().activePantryId;
+                        if (newActiveId !== currentPantryId && userPantries.some(p => p.id === newActiveId)) {
+                            currentPantryId = newActiveId;
+                            localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, currentPantryId);
+                            localStorage.setItem('active_pantry_id', currentPantryId);
+                            renderPantrySelector();
+                            setupRealtimeListener();
+                        }
+                    }
+                }, () => {});
+
+                // Escutar mudanças na coleção de despensas do usuário (ex: renomeação, criação ou exclusão no outro dispositivo)
+                const userPantriesCol = collection(db, 'users', currentUser.uid, 'pantries');
+                unsubscribePantriesSnapshot = onSnapshot(userPantriesCol, (snapshot) => {
+                    if (!snapshot.empty) {
+                        const updatedPantries = [];
+                        snapshot.forEach(d => {
+                            const data = d.data();
+                            const pid = data.pantryId || d.id;
+                            updatedPantries.push({ id: pid, ...data });
+                        });
+
+                        userPantries = updatedPantries;
+                        savePantriesToStorage(userPantries);
+                        renderPantrySelector();
+                        renderManagePantriesModalList();
+                    }
+                }, () => {});
+            } catch (e) {
+                console.warn("Aviso ao configurar listener de despensas:", e);
+            }
+        }
+
         async function loadUserPantries() {
             if (currentUser && db) {
                 try {
                     const foundPantriesMap = new Map();
+                    const localPantries = loadPantriesFromStorage();
 
                     // 1. Buscar na subcoleção do usuário users/{uid}/pantries
                     try {
@@ -1797,11 +1844,9 @@
                     // 3. Buscar despensa direta por ID padrão pantry_{uid}
                     try {
                         const defaultId = 'pantry_' + currentUser.uid.substring(0, 8);
-                        if (!foundPantriesMap.has(defaultId)) {
-                            const defSnap = await getDoc(doc(db, 'pantries', defaultId));
-                            if (defSnap.exists()) {
-                                foundPantriesMap.set(defaultId, { id: defaultId, ...defSnap.data() });
-                            }
+                        const defSnap = await getDoc(doc(db, 'pantries', defaultId));
+                        if (defSnap.exists()) {
+                            foundPantriesMap.set(defaultId, { id: defaultId, ...defSnap.data() });
                         }
                     } catch(e) {}
 
@@ -1820,7 +1865,14 @@
                             try {
                                 const pDoc = await getDoc(doc(db, 'pantries', pid));
                                 if (pDoc.exists()) {
-                                    fullPantries.push({ id: pid, ...pDoc.data() });
+                                    const masterData = pDoc.data();
+                                    fullPantries.push({
+                                        id: pid,
+                                        ...pData,
+                                        ...masterData,
+                                        name: masterData.name || pData.name,
+                                        shareCode: masterData.shareCode || pData.shareCode
+                                    });
                                 } else {
                                     fullPantries.push(pData);
                                 }
@@ -1828,10 +1880,23 @@
                                 fullPantries.push(pData);
                             }
                         }
+
+                        // Se o local tiver dados mais ricos (como nome customizado "Casa Vini"), sincronizar para o Firestore
+                        for (const lp of localPantries) {
+                            if (lp.name && lp.name !== 'Despensa Principal' && lp.name !== 'Despensa') {
+                                const match = fullPantries.find(p => p.id === lp.id || p.name === 'Despensa Principal');
+                                if (match && match.name === 'Despensa Principal') {
+                                    match.name = lp.name;
+                                    if (lp.shareCode) match.shareCode = lp.shareCode;
+                                    setDoc(doc(db, 'pantries', match.id), { name: match.name, shareCode: match.shareCode, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+                                    setDoc(doc(db, 'users', currentUser.uid, 'pantries', match.id), { name: match.name, shareCode: match.shareCode }, { merge: true }).catch(() => {});
+                                }
+                            }
+                        }
+
                         userPantries = fullPantries;
                     } else {
-                        // Sincronizar despensas locais existentes para o novo usuário logado
-                        const localPantries = loadPantriesFromStorage();
+                        // Inicializar despensas da conta na nuvem a partir dos dados locais
                         userPantries = [];
 
                         for (const lp of localPantries) {
@@ -1839,9 +1904,14 @@
                                 ? 'pantry_' + currentUser.uid.substring(0, 8)
                                 : lp.id;
                             
+                            const shareCode = lp.shareCode && !lp.shareCode.startsWith('DSP-LOCAL') && lp.shareCode.length >= 8
+                                ? lp.shareCode
+                                : generateShareCode();
+
                             const newPantry = {
                                 ...lp,
                                 id: pantryId,
+                                shareCode: shareCode,
                                 ownerUid: currentUser.uid,
                                 ownerName: currentUser.displayName || 'Usuário',
                                 members: [currentUser.uid],
@@ -1869,15 +1939,25 @@
                         }
                     }
 
-                    // Garantir que todas as despensas tenham shareCode exclusivo
-                    userPantries.forEach(p => {
+                    // Garantir que todas as despensas tenham shareCode exclusivo e gravado na nuvem
+                    for (const p of userPantries) {
                         if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
                             p.shareCode = generateShareCode();
-                            if (p.id && !p.id.startsWith('default_local') && !p.id.startsWith('pantry_principal')) {
-                                updateDoc(doc(db, 'pantries', p.id), { shareCode: p.shareCode }).catch(() => {});
-                            }
                         }
-                    });
+                        if (p.id && !p.id.startsWith('default_local')) {
+                            setDoc(doc(db, 'pantries', p.id), {
+                                id: p.id,
+                                name: p.name,
+                                shareCode: p.shareCode,
+                                updatedAt: new Date().toISOString()
+                            }, { merge: true }).catch(() => {});
+                            setDoc(doc(db, 'users', currentUser.uid, 'pantries', p.id), {
+                                pantryId: p.id,
+                                name: p.name,
+                                shareCode: p.shareCode
+                            }, { merge: true }).catch(() => {});
+                        }
+                    }
 
                     // Restaurar despensa ativa sincronizada com nuvem
                     const savedLocalId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PANTRY) || localStorage.getItem('active_pantry_id');
@@ -1896,6 +1976,8 @@
                         email: currentUser.email || '',
                         updatedAt: new Date().toISOString()
                     }, { merge: true }).catch(() => {});
+
+                    setupPantriesRealtimeListener();
 
                 } catch (err) {
                     console.error("Erro ao carregar despensas do Firestore:", err);
@@ -2250,6 +2332,10 @@
                     unsubscribeSnapshot();
                     unsubscribeSnapshot = null;
                 }
+                if (unsubscribePantriesSnapshot) {
+                    unsubscribePantriesSnapshot();
+                    unsubscribePantriesSnapshot = null;
+                }
                 updateAuthUI(null);
                 await loadUserPantries();
                 loadLocalFallback();
@@ -2393,6 +2479,10 @@
                     if (unsubscribeSnapshot) {
                         unsubscribeSnapshot();
                         unsubscribeSnapshot = null;
+                    }
+                    if (unsubscribePantriesSnapshot) {
+                        unsubscribePantriesSnapshot();
+                        unsubscribePantriesSnapshot = null;
                     }
                     updateAuthUI(null);
                     await loadUserPantries();
