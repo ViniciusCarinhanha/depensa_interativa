@@ -539,7 +539,7 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <form id="item-form" onsubmit="handleSaveItem(event)" class="p-6 space-y-4">
+            <form id="item-form" class="p-6 space-y-4">
                 <input type="hidden" id="form-item-id">
                 
                 <div>
@@ -686,7 +686,7 @@
                     </div>
 
                     <!-- Inserir Registro Manual Retroativo -->
-                    <form onsubmit="handleAddPriceHistoryEntry(event)" class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2">
+                    <form id="price-history-form" class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2">
                         <span class="text-xs font-bold text-slate-600 w-full sm:w-auto">Adicionar Registro:</span>
                         <input type="date" id="new-price-history-date" required class="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
                         <div class="relative flex-1 min-w-[110px]">
@@ -715,38 +715,38 @@
                 </button>
             </div>
 
-            <div class="p-6 space-y-4">
+            <div class="p-6 space-y-5">
                 <div class="text-center space-y-1">
-                    <span id="share-modal-pantry-name" class="font-bold text-slate-800 text-lg block">Despensa Principal</span>
-                    <p class="text-xs text-slate-500">Compartilhe o código abaixo com familiares ou colegas para que todos possam sincronizar e atualizar esta despensa em tempo real.</p>
+                    <span class="text-xs text-slate-500 font-medium">Você está compartilhando:</span>
+                    <h4 id="share-modal-pantry-name" class="text-lg font-bold text-slate-800">Despensa Principal</h4>
                 </div>
 
-                <!-- Código em Destaque -->
                 <div class="bg-emerald-50 border-2 border-dashed border-emerald-300 rounded-2xl p-4 text-center space-y-2">
-                    <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-widest block">Código de Compartilhamento</span>
-                    <div id="share-modal-code-display" class="font-mono text-2xl sm:text-3xl font-black text-emerald-700 tracking-wider select-all py-1">
-                        DSP-XXXX
+                    <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Código Exclusivo de Acesso</span>
+                    <div id="share-modal-code-display" class="font-mono text-2xl sm:text-3xl font-black text-emerald-700 tracking-widest selection:bg-emerald-200">
+                        DSP-...
                     </div>
-                    <button onclick="copyPantryShareCode()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer">
-                        <i class="fa-regular fa-copy"></i> Copiar Código
-                    </button>
+                    <p class="text-[11px] text-emerald-600">Compartilhe este código com outras pessoas para que elas acessem esta despensa.</p>
                 </div>
 
-                <div class="space-y-2 pt-1">
-                    <button onclick="sharePantryViaWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer">
-                        <i class="fa-brands fa-whatsapp text-base"></i> Enviar Convite no WhatsApp
+                <div class="grid grid-cols-2 gap-2.5 pt-2">
+                    <button onclick="copyPantryShareCode()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+                        <i class="fa-solid fa-copy text-slate-500"></i> Copiar Código
+                    </button>
+                    <button onclick="sharePantryViaWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL: ENTRAR EM DESPENSA COM CÓDIGO -->
+    <!-- MODAL: ENTRAR EM UMA DESPENSA -->
     <div id="join-pantry-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
             <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-link text-indigo-300 text-lg"></i>
+                    <i class="fa-solid fa-right-to-bracket text-indigo-300 text-lg"></i>
                     <h3 class="font-bold text-base">Entrar em uma Despensa</h3>
                 </div>
                 <button onclick="closeJoinPantryModal()" class="text-indigo-200 hover:text-white text-lg p-1 cursor-pointer">
@@ -754,7 +754,7 @@
                 </button>
             </div>
 
-            <form onsubmit="handleJoinPantry(event)" class="p-6 space-y-4">
+            <form id="join-pantry-form" class="p-6 space-y-4">
                 <p class="text-xs text-slate-600 leading-relaxed">
                     Insira o código de compartilhamento da despensa para acessá-la e participar da lista em tempo real.
                 </p>
@@ -787,7 +787,7 @@
                 </button>
             </div>
 
-            <form onsubmit="handleCreatePantry(event)" class="p-6 space-y-4">
+            <form id="create-pantry-form" class="p-6 space-y-4">
                 <p class="text-xs text-slate-600 leading-relaxed">
                     Crie listas separadas para diferentes locais (ex: "Casa de Praia", "Escritório", "Despensa da Cozinha"). Cada lista terá seu próprio código de compartilhamento.
                 </p>
@@ -1061,10 +1061,19 @@
             }
         ];
 
+        // Chaves Padronizadas de Armazenamento Local
+        const STORAGE_KEYS = {
+            PANTRIES: 'despensa_user_pantries_v1',
+            ACTIVE_PANTRY: 'despensa_active_pantry_id_v1',
+            ITEMS_PREFIX: 'despensa_items_v1_',
+            INITIALIZED: 'despensa_has_initialized_v1',
+            CUSTOM_CATS: 'user_custom_categories'
+        };
+
         // State Variables
         let currentUser = null;
         let pantryItems = [];
-        let currentPantryId = 'default_local';
+        let currentPantryId = 'pantry_principal';
         let userPantries = [];
         let currentPriceHistoryItemId = null;
         let unsubscribeSnapshot = null;
@@ -1077,6 +1086,7 @@
         let scannedBase64Image = null;
         let scannedMimeType = 'image/jpeg';
         let detectedScannedItems = [];
+        let isSavingItem = false;
 
         // Helper para Gerar Código Único e Aleatório de Compartilhamento (6 caracteres alfanuméricos)
         function generateShareCode() {
@@ -1086,6 +1096,70 @@
                 code += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             return code;
+        }
+
+        // =========================================================================
+        // MOTOR DE PERSISTÊNCIA INQUEBRÁVEL (LOCALSTORAGE + FIRESTORE)
+        // =========================================================================
+        function loadPantryItemsFromStorage(pantryId) {
+            if (!pantryId) return [];
+
+            // 1. Tentar chave v1 da despensa
+            let raw = localStorage.getItem(STORAGE_KEYS.ITEMS_PREFIX + pantryId);
+            if (raw !== null) {
+                try { return JSON.parse(raw); } catch(e) {}
+            }
+
+            // 2. Tentar chave de cache legada
+            raw = localStorage.getItem(`pantry_cache_${pantryId}`);
+            if (raw !== null) {
+                try { return JSON.parse(raw); } catch(e) {}
+            }
+
+            // 3. Se for a despensa principal e for a PRIMEIRA execução histórica deste navegador:
+            const isInitialized = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
+            if (!isInitialized) {
+                localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+                savePantryItemsToStorage(pantryId, INITIAL_SAMPLE_DATA);
+                return [...INITIAL_SAMPLE_DATA];
+            }
+
+            return [];
+        }
+
+        function savePantryItemsToStorage(pantryId, items) {
+            if (!pantryId) return;
+            const data = JSON.stringify(items || []);
+            localStorage.setItem(STORAGE_KEYS.ITEMS_PREFIX + pantryId, data);
+            localStorage.setItem(`pantry_cache_${pantryId}`, data);
+        }
+
+        function loadPantriesFromStorage() {
+            let raw = localStorage.getItem(STORAGE_KEYS.PANTRIES);
+            if (!raw) raw = localStorage.getItem('local_user_pantries');
+            if (raw) {
+                try {
+                    const list = JSON.parse(raw);
+                    if (Array.isArray(list) && list.length > 0) return list;
+                } catch(e) {}
+            }
+
+            // Despensa Inicial Padrão
+            const initialPantry = {
+                id: 'pantry_principal',
+                name: 'Despensa Principal',
+                shareCode: generateShareCode(),
+                role: 'owner',
+                createdAt: new Date().toISOString()
+            };
+            savePantriesToStorage([initialPantry]);
+            return [initialPantry];
+        }
+
+        function savePantriesToStorage(pantries) {
+            const data = JSON.stringify(pantries || []);
+            localStorage.setItem(STORAGE_KEYS.PANTRIES, data);
+            localStorage.setItem('local_user_pantries', data);
         }
 
         // Universal Gemini API Caller com suporte a chaves AQ (query param + header) e Fallback de Modelos
@@ -1191,13 +1265,10 @@
         }
 
         async function switchPantry(pantryId) {
-            if (currentPantryId === pantryId) {
-                const menu = document.getElementById('pantry-dropdown-menu');
-                if (menu) menu.classList.add('hidden');
-                return;
-            }
+            if (!pantryId) return;
 
             currentPantryId = pantryId;
+            localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, pantryId);
             localStorage.setItem('active_pantry_id', pantryId);
             
             const menu = document.getElementById('pantry-dropdown-menu');
@@ -1226,7 +1297,10 @@
         }
 
         async function handleCreatePantry(e) {
-            e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             const nameInput = document.getElementById('create-pantry-name-input');
             const name = (nameInput ? nameInput.value : '').trim();
             if (!name) {
@@ -1264,7 +1338,8 @@
             }
 
             userPantries.push(pantryObj);
-            localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
+            savePantriesToStorage(userPantries);
+            savePantryItemsToStorage(newPantryId, []);
             closeCreatePantryModal();
             
             await switchPantry(newPantryId);
@@ -1283,7 +1358,10 @@
         }
 
         async function handleJoinPantry(e) {
-            e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             const codeInput = document.getElementById('join-pantry-code-input');
             const rawCode = (codeInput ? codeInput.value : '').trim().toUpperCase();
             if (!rawCode) {
@@ -1341,7 +1419,7 @@
                     };
 
                     userPantries.push(pantryObj);
-                    localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
+                    savePantriesToStorage(userPantries);
 
                     closeJoinPantryModal();
                     await switchPantry(pantryId);
@@ -1359,7 +1437,7 @@
                     role: 'member'
                 };
                 userPantries.push(mockPantry);
-                localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
+                savePantriesToStorage(userPantries);
                 closeJoinPantryModal();
                 await switchPantry(mockPantry.id);
                 showToast(`Despensa com código ${code} conectada localmente!`, 'success');
@@ -1416,73 +1494,73 @@
                     if (!snapshot.empty) {
                         userPantries = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     } else {
-                        // Criar despensa padrão se não possuir nenhuma
-                        const defaultCode = generateShareCode();
-                        const defaultId = 'pantry_' + currentUser.uid.substring(0, 8);
-                        const defaultPantry = {
-                            id: defaultId,
-                            name: 'Despensa Principal',
-                            shareCode: defaultCode,
-                            ownerUid: currentUser.uid,
-                            ownerName: currentUser.displayName || 'Usuário',
-                            members: [currentUser.uid],
-                            createdAt: new Date().toISOString(),
-                            updatedAt: new Date().toISOString()
-                        };
-                        await setDoc(doc(db, 'pantries', defaultId), defaultPantry);
-                        userPantries = [defaultPantry];
-                    }
+                        // Sincronizar despensas locais existentes para o novo usuário logado
+                        const localPantries = loadPantriesFromStorage();
+                        userPantries = [];
 
-                    // Migração automática de códigos genéricos para códigos únicos
-                    userPantries.forEach(p => {
-                        if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
-                            p.shareCode = generateShareCode();
-                            if (p.id) {
-                                updateDoc(doc(db, 'pantries', p.id), { shareCode: p.shareCode, updatedAt: new Date().toISOString() }).catch(() => {});
+                        for (const lp of localPantries) {
+                            const pantryId = (lp.id === 'default_local' || lp.id === 'pantry_principal')
+                                ? 'pantry_' + currentUser.uid.substring(0, 8)
+                                : lp.id;
+                            
+                            const newPantry = {
+                                ...lp,
+                                id: pantryId,
+                                ownerUid: currentUser.uid,
+                                ownerName: currentUser.displayName || 'Usuário',
+                                members: [currentUser.uid],
+                                createdAt: lp.createdAt || new Date().toISOString(),
+                                updatedAt: new Date().toISOString()
+                            };
+
+                            await setDoc(doc(db, 'pantries', pantryId), newPantry);
+                            await setDoc(doc(db, 'users', currentUser.uid, 'pantries', pantryId), {
+                                pantryId: pantryId,
+                                name: newPantry.name,
+                                shareCode: newPantry.shareCode,
+                                role: 'owner',
+                                joinedAt: new Date().toISOString()
+                            });
+
+                            // Migrar itens da despensa para o Firestore
+                            const localItems = loadPantryItemsFromStorage(lp.id);
+                            for (const it of localItems) {
+                                const itemDocRef = doc(collection(db, 'pantries', pantryId, 'items'), it.id);
+                                await setDoc(itemDocRef, it, { merge: true });
                             }
-                        }
-                    });
 
-                    // Restaurar despensa ativa salva
-                    const savedPantryId = localStorage.getItem('active_pantry_id');
-                    if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
-                        currentPantryId = savedPantryId;
-                    } else {
-                        currentPantryId = userPantries[0].id;
+                            userPantries.push(newPantry);
+                        }
                     }
                 } catch (err) {
-                    console.error("Erro ao carregar despensas do usuário:", err);
+                    console.error("Erro ao carregar despensas do Firestore:", err);
+                    userPantries = loadPantriesFromStorage();
                 }
             } else {
-                const local = localStorage.getItem('local_user_pantries');
-                if (local) {
-                    try {
-                        userPantries = JSON.parse(local);
-                    } catch(e) {
-                        userPantries = [];
-                    }
-                }
-                
-                if (!userPantries || userPantries.length === 0) {
-                    userPantries = [{ id: 'default_local', name: 'Despensa Principal', shareCode: generateShareCode(), role: 'owner' }];
-                }
-
-                // Migração de códigos genéricos em modo local
-                userPantries.forEach(p => {
-                    if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
-                        p.shareCode = generateShareCode();
-                    }
-                });
-
-                localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
-
-                const savedPantryId = localStorage.getItem('active_pantry_id');
-                if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
-                    currentPantryId = savedPantryId;
-                } else {
-                    currentPantryId = userPantries[0].id;
-                }
+                userPantries = loadPantriesFromStorage();
             }
+
+            // Garantir que todas as despensas tenham shareCode exclusivo
+            userPantries.forEach(p => {
+                if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
+                    p.shareCode = generateShareCode();
+                    if (currentUser && db && p.id && !p.id.startsWith('default_local') && !p.id.startsWith('pantry_principal')) {
+                        updateDoc(doc(db, 'pantries', p.id), { shareCode: p.shareCode }).catch(() => {});
+                    }
+                }
+            });
+
+            savePantriesToStorage(userPantries);
+
+            // Restaurar despensa ativa de forma segura
+            const savedPantryId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PANTRY) || localStorage.getItem('active_pantry_id');
+            if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
+                currentPantryId = savedPantryId;
+            } else if (userPantries.length > 0) {
+                currentPantryId = userPantries[0].id;
+            }
+            localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, currentPantryId);
+            localStorage.setItem('active_pantry_id', currentPantryId);
 
             renderPantrySelector();
         }
@@ -1869,7 +1947,7 @@
             const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
             unsubscribeSnapshot = onSnapshot(itemsCol, (snapshot) => {
                 pantryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                localStorage.setItem(`pantry_cache_${currentPantryId}`, JSON.stringify(pantryItems));
+                savePantryItemsToStorage(currentPantryId, pantryItems);
                 populateCategorySelects();
                 renderAll();
             }, (err) => {
@@ -1879,17 +1957,7 @@
         }
 
         function loadLocalFallback() {
-            const cacheKey = `pantry_cache_${currentPantryId || 'default'}`;
-            const cached = localStorage.getItem(cacheKey);
-            if (cached) {
-                try {
-                    pantryItems = JSON.parse(cached);
-                } catch(e) {
-                    pantryItems = INITIAL_SAMPLE_DATA;
-                }
-            } else {
-                pantryItems = INITIAL_SAMPLE_DATA;
-            }
+            pantryItems = loadPantryItemsFromStorage(currentPantryId);
             populateCategorySelects();
             renderAll();
         }
@@ -2003,14 +2071,14 @@
 
                 itemData.updatedAt = new Date().toISOString();
 
-                // 1. Atualização Otimista Imediata na Memória e no Cache Local
+                // 1. Atualização Otimista Imediata na Memória e no Armazenamento Local
                 const idx = pantryItems.findIndex(i => i.id === itemData.id);
                 if (idx >= 0) {
                     pantryItems[idx] = { ...pantryItems[idx], ...itemData };
                 } else {
                     pantryItems.unshift({ ...itemData });
                 }
-                localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
+                savePantryItemsToStorage(currentPantryId, pantryItems);
                 renderAll();
 
                 // 2. Sincronização com Firestore (se online)
@@ -2036,9 +2104,9 @@
             const item = pantryItems.find(i => i.id === id);
             const itemName = item ? item.name : 'Item';
 
-            // Atualização imediata em memória e no cache local
+            // Atualização imediata em memória e no armazenamento local
             pantryItems = pantryItems.filter(i => i.id !== id);
-            localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
+            savePantryItemsToStorage(currentPantryId, pantryItems);
             renderAll();
 
             if (currentUser && db && currentPantryId) {
@@ -2057,7 +2125,7 @@
 
             const newQty = Math.max(0, (parseInt(item.quantity) || 0) + delta);
             item.quantity = newQty;
-            localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
+            savePantryItemsToStorage(currentPantryId, pantryItems);
             renderAll();
 
             if (currentUser && db && currentPantryId) {
@@ -2364,6 +2432,8 @@
                 e.preventDefault();
                 e.stopPropagation();
             }
+            if (isSavingItem) return;
+            isSavingItem = true;
 
             const nameInput = document.getElementById('form-name');
             const catInput = document.getElementById('form-category');
@@ -2379,6 +2449,7 @@
             if (!name) {
                 showToast("Por favor, preencha o nome do item.", "error");
                 nameInput?.focus();
+                isSavingItem = false;
                 return;
             }
 
@@ -2413,6 +2484,8 @@
             } catch (err) {
                 console.error("Erro ao salvar item:", err);
                 showToast("Erro ao salvar item: " + (err.message || "Tente novamente"), "error");
+            } finally {
+                isSavingItem = false;
             }
         }
 
