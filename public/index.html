@@ -887,19 +887,19 @@
                 <!-- Explicação do Recurso -->
                 <div class="bg-violet-50/70 border border-violet-200 rounded-xl p-4 text-xs text-violet-950 space-y-2">
                     <div class="font-bold flex items-center gap-1.5 text-violet-900 text-sm">
-                        <i class="fa-solid fa-lightbulb text-violet-600"></i> Como a IA otimiza sua lista:
+                        <i class="fa-solid fa-shield-halved text-violet-600"></i> Diretrizes Estritas do Otimizador Não-Destrutivo:
                     </div>
                     <ul class="list-disc list-inside space-y-1 text-slate-700">
-                        <li><strong>Traduz nomes fiscais abreviados:</strong> Converte termos crípticos de notas fiscais (ex: <em>BISC RECH PASSATEMPO 130G</em>) em nomes claros e didáticos (<em>Biscoito Passatempo</em>).</li>
-                        <li><strong>Agrupa variações e sabores:</strong> Consolida produtos de mesma marca e tipo (ex: <em>Ruffles Churrasco + Ruffles Cebola</em>) em uma única entrada, somando as quantidades.</li>
-                        <li><strong>Calcula preços realistas:</strong> Normaliza o custo unitário e patrimônio para nunca inflar o valor financeiro.</li>
+                        <li><strong>Preservação Rígida de Marcas:</strong> Produtos de marcas diferentes (ex: <em>Tilápia Copacol</em> vs <em>Tilápia Seara</em>) permanecem estritamente separados para não distorcer custos.</li>
+                        <li><strong>Nomes Comerciais com Marca Explícita:</strong> Traduz abreviações mantendo a marca visível (ex: <em>Filé de Tilápia Copacol 500g</em>).</li>
+                        <li><strong>Preço Médio Ponderado & Histórico:</strong> Ao consolidar sabores da mesma marca ou notas duplicadas, o histórico de compras é salvo e o preço unitário reflete o custo médio exato sem perda financeira.</li>
                     </ul>
                 </div>
 
                 <!-- Estado Inicial / Botão de Ação -->
                 <div id="optimize-initial-state" class="text-center py-4 space-y-3">
                     <div class="text-xs text-slate-500">
-                        A otimização analisará todos os itens da despensa ativa (<span id="optimize-pantry-target-name" class="font-bold text-slate-700">Despensa</span>) e exibirá uma prévia antes de aplicar.
+                        A otimização analisará todos os itens da despensa ativa (<span id="optimize-pantry-target-name" class="font-bold text-slate-700">Despensa</span>) e exibirá uma prévia detalhada com preço médio antes de aplicar.
                     </div>
                     <button onclick="runOptimizePantryAI()" id="btnStartOptimizeAI" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 text-xs sm:text-sm mx-auto cursor-pointer">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> Analisar e Otimizar com IA
@@ -911,8 +911,8 @@
                     <div class="inline-block animate-spin text-violet-600 text-3xl">
                         <i class="fa-solid fa-circle-notch"></i>
                     </div>
-                    <p id="optimize-progress-text" class="text-sm font-semibold text-slate-700">Analisando produtos e agrupando variações...</p>
-                    <p class="text-xs text-slate-400">Normalizando nomes e consolidando quantidades</p>
+                    <p id="optimize-progress-text" class="text-sm font-semibold text-slate-700">Analisando produtos e preservando marcas...</p>
+                    <p class="text-xs text-slate-400">Calculando preço médio ponderado e histórico</p>
                 </div>
 
                 <!-- Prévia dos Resultados -->
@@ -926,10 +926,11 @@
                         <table class="w-full text-left text-xs">
                             <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                                 <tr>
-                                    <th class="p-2.5">Produto Otimizado</th>
+                                    <th class="p-2.5">Produto com Marca</th>
                                     <th class="p-2.5">Categoria</th>
                                     <th class="p-2.5 text-center">Quantidade</th>
-                                    <th class="p-2.5 text-right">Preço Un.</th>
+                                    <th class="p-2.5 text-right">Preço Médio</th>
+                                    <th class="p-2.5 text-right">Total Somado</th>
                                 </tr>
                             </thead>
                             <tbody id="optimize-preview-tbody" class="divide-y divide-slate-100 text-slate-700"></tbody>
@@ -2845,6 +2846,18 @@
         }
 
         function getItemTotalValue(item) {
+            // Se o item consolidado tiver histórico de compras individuais, somar o custo real exato:
+            // Patrimônio = (Qtd_1 * Preco_1) + (Qtd_2 * Preco_2) + ...
+            if (Array.isArray(item.purchaseHistory) && item.purchaseHistory.length > 1) {
+                let exactSum = 0;
+                item.purchaseHistory.forEach(ph => {
+                    const q = parseFloat(String(ph.qty || 1).replace(',', '.')) || 1;
+                    const p = parseFloat(String(ph.price || 0).replace(',', '.')) || 0;
+                    exactSum += (q * p);
+                });
+                if (exactSum > 0) return exactSum;
+            }
+
             const price = parseFloat(String(item.price || 0).replace(',', '.')) || 0;
             const qty = parseFloat(String(item.quantity || 0).replace(',', '.')) || 0;
             const unit = (item.unit || 'un').toLowerCase();
@@ -3555,47 +3568,49 @@ Sugestão de Categorias: ${currentCats}`;
                 unit: it.unit,
                 price: it.price,
                 location: it.location,
-                expiry: it.expiry
+                expiry: it.expiry,
+                brand: it.brand || '',
+                priceHistory: it.priceHistory || [],
+                purchaseHistory: it.purchaseHistory || []
             })), null, 2);
 
-            const prompt = `Você é um especialista em organização de estoque doméstico e inteligência de despensa.
-Receba a lista atual de produtos cadastrados na despensa e realize uma OTIMIZAÇÃO COMPLETA seguindo rigorosamente estas diretrizes:
+            const prompt = `Você é um especialista em inventário doméstico e inteligência não-destrutiva de despensa.
+Receba a lista atual de produtos cadastrados e realize uma OTIMIZAÇÃO ESTRITA seguindo RIGOROSAMENTE estas 3 regras fundamentais:
 
-1. NORMALIZAÇÃO DIDÁTICA DE NOMES:
-- Converta qualquer nome críptico, abreviado ou copiado de cupom fiscal em nomes legíveis e elegantes em português.
+1. PRESERVAÇÃO RÍGIDA DE MARCAS DISTINTAS (PROIBIDO MISTURAR MARCAS DIFERENTES):
+- NUNCA unifique produtos de marcas diferentes no mesmo registro se forem compras distintas (Ex: "Filé de Tilápia Copacol R$ 25" e "Filé de Tilápia Seara R$ 28" DEVEM permanecer como DOIS registros separados).
+- Apenas unifique se for:
+  a) Variações de sabor/tipo da MESMA marca com mesmo produto (Ex: "Ruffles Churrasco 130g" + "Ruffles Cebola 130g").
+  b) Códigos fiscais duplicados do mesmo produto exato na mesma compra ou compras sucessivas da mesma marca.
+
+2. LIMPEZA DE NOMES COM MARCA EXPLÍCITA:
+- Converta abreviações fiscais crípticas em nomes comerciais limpos e elegantes em português, PRESERVANDO SEMPRE A MARCA EXPLÍCITA no nome.
 Exemplos:
-- "BISC RECH PASSATEMPO CHOC 130G" -> "Biscoito Recheado Passatempo"
-- "DESINF PINHO SOL LAVANDA 1L" -> "Desinfetante Pinho Sol Lavanda 1L"
-- "MOLHO TOM ELEFANTE SACHE 300G" -> "Molho de Tomate Elefante"
+- "FILE TILAPIA COPAC CONG 500G" -> "Filé de Tilápia Copacol 500g" (brand: "Copacol")
+- "BISC RECH PASSATEMPO CHOC 130G" -> "Biscoito Recheado Passatempo Nestlé" (brand: "Nestlé" ou "Passatempo")
+- "REFRI COCA PET 2L" -> "Refrigerante Coca-Cola 2L" (brand: "Coca-Cola")
+- "DESINF PINHO SOL LAVANDA 1L" -> "Desinfetante Pinho Sol Lavanda 1L" (brand: "Pinho Sol")
 
-2. AGRUPAMENTO INTELIGENTE DE PRODUTOS SIMILARES / SABORES / MARCAS:
-- Agrupe variações de um mesmo produto ou sabores da mesma linha em um único item didático consolidado.
-Exemplo:
-- Se houver "Batata Ruffles Cebola e Salsa" (1 un, R$ 8,00) e "Batata Ruffles Churrasco" (1 un, R$ 8,00), CONSOLIDE em "Batata Chips Ruffles" com quantidade = 2, unit = "pct" (ou "un"), e price = 8.00.
-- Se houver "Molho de Tomate 300g" (2 un) de marcas equivalentes ou compras diferentes, junte em um único item somando as quantidades.
-
-3. PREÇOS UNITÁRIOS REALISTAS:
-- O campo "price" deve representar o preço unitário realista do produto/embalagem em reais (R$).
-
-4. PRESERVAÇÃO DE CAMPOS:
-- Mantenha ou infira a data de validade mais próxima ("expiry"), o local adequado ("location") e uma das categorias sugeridas.
+3. IDENTIFICAÇÃO DOS ITENS UNIFICADOS:
+- Para cada item otimizado retornado, indique no campo "mergedOriginalIds" os IDs dos itens originais que foram consolidados (ex: ["id1", "id2"] ou apenas ["id1"] se for individual).
+- Indique o campo "brand" com a marca identificada.
 
 Categorias disponíveis: ${currentCats}
 
 Lista Atual de Itens:
 ${currentListJson}
 
-Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além de json):
+Retorne APENAS um array JSON puro (sem explicações, sem markdown além de json):
 [
   {
-    "name": "Nome Otimizado e Didático",
-    "category": "Snacks e Doces",
-    "location": "Armário Principal",
-    "quantity": 2,
+    "name": "Nome Comercial Limpo com Marca Explícita",
+    "brand": "Copacol",
+    "category": "Carnes e Peixes",
+    "location": "Freezer",
     "unit": "pct",
-    "price": 8.00,
     "minQuantity": 1,
-    "expiry": "2027-02-23"
+    "expiry": "2026-12-31",
+    "mergedOriginalIds": ["id_item_1"]
   }
 ]`;
 
@@ -3610,18 +3625,88 @@ Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além 
                     throw new Error("A IA não retornou itens válidos.");
                 }
 
-                optimizedPantryItemsPreview = optimizedItems.map(item => ({
-                    id: 'opt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-                    name: item.name || 'Produto',
-                    category: item.category || 'Outros',
-                    location: item.location || 'Armário Principal',
-                    quantity: parseInt(item.quantity) || 1,
-                    unit: item.unit || 'un',
-                    price: parseFloat(item.price) || 0,
-                    minQuantity: parseInt(item.minQuantity) || 1,
-                    expiry: item.expiry || getRelativeDate(60),
-                    updatedAt: new Date().toISOString()
-                }));
+                optimizedPantryItemsPreview = optimizedItems.map(item => {
+                    const origIds = Array.isArray(item.mergedOriginalIds) ? item.mergedOriginalIds : [];
+                    let matchedOriginals = pantryItems.filter(p => origIds.includes(p.id));
+                    
+                    if (matchedOriginals.length === 0) {
+                        matchedOriginals = pantryItems.filter(p => p.name === item.name || (item.brand && p.name && p.name.toLowerCase().includes(item.brand.toLowerCase())));
+                    }
+
+                    let totalLotValue = 0;
+                    let totalLotQuantity = 0;
+                    let combinedPurchaseHistory = [];
+                    let combinedPriceHistory = [];
+
+                    matchedOriginals.forEach(orig => {
+                        const q = parseFloat(String(orig.quantity || 1).replace(',', '.')) || 1;
+                        const p = parseFloat(String(orig.price || 0).replace(',', '.')) || 0;
+                        totalLotQuantity += q;
+                        totalLotValue += (q * p);
+
+                        if (Array.isArray(orig.purchaseHistory) && orig.purchaseHistory.length > 0) {
+                            orig.purchaseHistory.forEach(h => combinedPurchaseHistory.push(h));
+                        } else {
+                            combinedPurchaseHistory.push({
+                                date: orig.updatedAt || orig.createdAt || new Date().toISOString(),
+                                price: p,
+                                qty: q,
+                                brand: item.brand || orig.brand || '',
+                                note: orig.name
+                            });
+                        }
+
+                        if (Array.isArray(orig.priceHistory) && orig.priceHistory.length > 0) {
+                            orig.priceHistory.forEach(ph => {
+                                if (!combinedPriceHistory.some(existing => existing.date === ph.date && existing.price === ph.price)) {
+                                    combinedPriceHistory.push(ph);
+                                }
+                            });
+                        } else if (p > 0) {
+                            combinedPriceHistory.push({
+                                date: (orig.updatedAt || orig.createdAt || new Date().toISOString()).split('T')[0],
+                                price: p,
+                                market: orig.location || 'Supermercado'
+                            });
+                        }
+                    });
+
+                    if (totalLotQuantity === 0) {
+                        totalLotQuantity = parseInt(item.quantity) || 1;
+                    }
+                    if (totalLotValue === 0) {
+                        totalLotValue = (parseFloat(String(item.price || 0).replace(',', '.')) || 0) * totalLotQuantity;
+                    }
+
+                    // Preço Médio Ponderado Exato: Patrimônio / Quantidade
+                    const weightedAvgPrice = totalLotQuantity > 0 ? (totalLotValue / totalLotQuantity) : (parseFloat(item.price) || 0);
+
+                    if (weightedAvgPrice > 0) {
+                        combinedPriceHistory.push({
+                            date: new Date().toISOString().split('T')[0],
+                            price: parseFloat(weightedAvgPrice.toFixed(2)),
+                            market: 'Preço Médio Ponderado'
+                        });
+                    }
+
+                    return {
+                        id: (matchedOriginals.length === 1 && matchedOriginals[0].id) ? matchedOriginals[0].id : ('opt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7)),
+                        name: item.name || 'Produto',
+                        brand: item.brand || (matchedOriginals[0]?.brand || ''),
+                        category: item.category || (matchedOriginals[0]?.category || 'Outros'),
+                        location: item.location || (matchedOriginals[0]?.location || 'Armário Principal'),
+                        quantity: totalLotQuantity,
+                        unit: item.unit || (matchedOriginals[0]?.unit || 'un'),
+                        price: parseFloat(weightedAvgPrice.toFixed(2)),
+                        totalLotValue: parseFloat(totalLotValue.toFixed(2)),
+                        minQuantity: parseInt(item.minQuantity) || (matchedOriginals[0]?.minQuantity || 1),
+                        expiry: item.expiry || (matchedOriginals[0]?.expiry || getRelativeDate(60)),
+                        purchaseHistory: combinedPurchaseHistory,
+                        priceHistory: combinedPriceHistory,
+                        mergedCount: matchedOriginals.length,
+                        updatedAt: new Date().toISOString()
+                    };
+                });
 
                 renderOptimizePreview();
             } catch (err) {
@@ -3647,11 +3732,20 @@ Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além 
 
             optimizedPantryItemsPreview.forEach(it => {
                 const tr = document.createElement('tr');
+                const brandBadge = it.brand ? `<span class="bg-violet-100 text-violet-800 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1.5">${it.brand}</span>` : '';
+                const historyBadge = (it.mergedCount && it.mergedCount > 1) ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-1.5 py-0.5 rounded ml-1" title="${it.mergedCount} compras consolidadas">${it.mergedCount} unificados</span>` : '';
+                const itemTotal = it.totalLotValue || (it.price * it.quantity);
+
                 tr.innerHTML = `
-                    <td class="p-2.5 font-bold text-slate-800">${it.name}</td>
+                    <td class="p-2.5">
+                        <div class="font-bold text-slate-800 flex items-center flex-wrap gap-1">
+                            ${it.name} ${brandBadge} ${historyBadge}
+                        </div>
+                    </td>
                     <td class="p-2.5 text-slate-500">${it.category}</td>
                     <td class="p-2.5 text-center font-bold text-emerald-700 bg-emerald-50/50">${it.quantity} ${it.unit}</td>
                     <td class="p-2.5 text-right font-semibold text-slate-700">R$ ${(parseFloat(it.price) || 0).toFixed(2).replace('.', ',')}</td>
+                    <td class="p-2.5 text-right font-bold text-violet-900">R$ ${(parseFloat(itemTotal) || 0).toFixed(2).replace('.', ',')}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -3663,7 +3757,7 @@ Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além 
         async function applyOptimizedPantryItems() {
             if (!optimizedPantryItemsPreview || optimizedPantryItemsPreview.length === 0) return;
 
-            showToast("Aplicando lista otimizada...", "info");
+            showToast("Aplicando lista otimizada com histórico...", "info");
 
             try {
                 // 1. Limpar itens antigos no Firestore da despensa ativa
@@ -3684,7 +3778,7 @@ Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além 
                     } catch(e) {}
                 }
 
-                // 2. Salvar nova lista otimizada
+                // 2. Salvar nova lista otimizada com histórico intacto
                 pantryItems = [...optimizedPantryItemsPreview];
                 savePantryItemsToStorage(currentPantryId, pantryItems);
 
@@ -3702,7 +3796,7 @@ Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além 
                 populateCategorySelects();
                 renderAll();
                 closeOptimizePantryModal();
-                showToast("✓ Despensa otimizada e agrupada com sucesso pela IA!", "success");
+                showToast("✓ Despensa otimizada com preservação de marcas e histórico de preços!", "success");
             } catch (err) {
                 console.error("Erro ao aplicar otimização:", err);
                 showToast("Erro ao aplicar otimização: " + err.message, "error");
@@ -4043,6 +4137,7 @@ Retorne APENAS um JSON puro no formato:
         window.copyShoppingListToWhatsApp = copyShoppingListToWhatsApp;
         window.sortTable = sortTable;
         window.renderPantryTable = renderPantryTable;
+        window.getItemTotalValue = getItemTotalValue;
         window.loginWithGoogle = loginWithGoogle;
         window.logout = logout;
         window.openConfigIAModal = openConfigIAModal;
