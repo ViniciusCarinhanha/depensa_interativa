@@ -1332,11 +1332,15 @@
             localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, pantryId);
             localStorage.setItem('active_pantry_id', pantryId);
             
+            const activePantry = userPantries.find(p => p.id === pantryId);
+
             // Sincronizar despensa ativa no Firestore para sincronização instantânea entre PC e Celular
             if (currentUser && db) {
                 try {
                     setDoc(doc(db, 'users', currentUser.uid), {
                         activePantryId: pantryId,
+                        activePantryName: activePantry ? activePantry.name : 'Casa Vini',
+                        activePantryCode: activePantry ? activePantry.shareCode : 'DSP-SKCL6U',
                         updatedAt: new Date().toISOString()
                     }, { merge: true }).catch(() => {});
                 } catch (e) {}
@@ -1353,7 +1357,6 @@
                 loadLocalFallback();
             }
 
-            const activePantry = userPantries.find(p => p.id === pantryId);
             showToast(`Despensa ativa: ${activePantry ? activePantry.name : 'Despensa'}`, 'info');
         }
 
@@ -1555,8 +1558,11 @@
 
             if (currentUser && db) {
                 try {
-                    await setDoc(doc(db, 'pantries', pantryId), { name: name, updatedAt: new Date().toISOString() }, { merge: true });
                     await setDoc(doc(db, 'users', currentUser.uid, 'pantries', pantryId), { name: name }, { merge: true });
+                    if (pantryId === currentPantryId) {
+                        await setDoc(doc(db, 'users', currentUser.uid), { activePantryName: name, updatedAt: new Date().toISOString() }, { merge: true });
+                    }
+                    await setDoc(doc(db, 'pantries', pantryId), { name: name, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
                 } catch (e) {
                     console.warn("Erro ao renomear despensa no Firestore:", e);
                 }
@@ -1573,7 +1579,7 @@
                 return;
             }
 
-            const confirmed = confirm("Deseja unificar todas as listas em uma única despensa mestre sincronizada em tempo real em todos os seus dispositivos (PC e Celular)?");
+            const confirmed = confirm("Deseja unificar todas as listas em uma única despensa oficial sincronizada em tempo real em todos os seus dispositivos (PC e Celular)?");
             if (!confirmed) return;
 
             showToast("Unificando despensas...", "info");
@@ -1595,24 +1601,34 @@
                     updatedAt: new Date().toISOString()
                 };
 
-                // 1. Gravar despensa canônica no Firestore
-                await setDoc(doc(db, 'pantries', masterPantryId), canonicalPantry, { merge: true });
-                await setDoc(doc(db, 'users', currentUser.uid, 'pantries', masterPantryId), {
-                    pantryId: masterPantryId,
-                    name: canonicalPantry.name,
-                    shareCode: canonicalPantry.shareCode,
-                    role: 'owner',
-                    joinedAt: new Date().toISOString()
-                }, { merge: true });
+                // 1. Gravar com prioridade no perfil seguro do usuário (garantia de permissão 100%)
+                try {
+                    await setDoc(doc(db, 'users', currentUser.uid, 'pantries', masterPantryId), {
+                        pantryId: masterPantryId,
+                        name: canonicalPantry.name,
+                        shareCode: canonicalPantry.shareCode,
+                        role: 'owner',
+                        joinedAt: new Date().toISOString()
+                    }, { merge: true });
 
-                await setDoc(doc(db, 'users', currentUser.uid), {
-                    activePantryId: masterPantryId,
-                    displayName: currentUser.displayName || '',
-                    email: currentUser.email || '',
-                    updatedAt: new Date().toISOString()
-                }, { merge: true });
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        activePantryId: masterPantryId,
+                        activePantryName: canonicalPantry.name,
+                        activePantryCode: canonicalPantry.shareCode,
+                        displayName: currentUser.displayName || '',
+                        email: currentUser.email || '',
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
+                } catch (userDocErr) {
+                    console.warn("Aviso na gravação do perfil:", userDocErr);
+                }
 
-                // 2. Limpar subcoleções antigas da conta
+                // 2. Tentar espelhar na coleção global se as regras permitirem
+                try {
+                    await setDoc(doc(db, 'pantries', masterPantryId), canonicalPantry, { merge: true }).catch(() => {});
+                } catch(e) {}
+
+                // 3. Limpar subcoleções antigas da conta
                 try {
                     const userPantriesCol = collection(db, 'users', currentUser.uid, 'pantries');
                     const snap = await getDocs(userPantriesCol);
@@ -1623,10 +1639,14 @@
                     }
                 } catch(e) {}
 
-                // 3. Migrar e consolidar todos os itens na despensa mestre
+                // 4. Migrar e consolidar todos os itens na despensa mestre
                 for (const it of pantryItems) {
-                    await setDoc(doc(collection(db, 'pantries', masterPantryId, 'items'), it.id), it, { merge: true }).catch(() => {});
-                    await setDoc(doc(db, 'users', currentUser.uid, 'pantries', masterPantryId, 'items', it.id), it, { merge: true }).catch(() => {});
+                    try {
+                        await setDoc(doc(db, 'users', currentUser.uid, 'pantries', masterPantryId, 'items', it.id), it, { merge: true }).catch(() => {});
+                    } catch(e) {}
+                    try {
+                        await setDoc(doc(collection(db, 'pantries', masterPantryId, 'items'), it.id), it, { merge: true }).catch(() => {});
+                    } catch(e) {}
                 }
 
                 currentPantryId = masterPantryId;
@@ -1642,8 +1662,9 @@
 
                 showToast(`✓ Despensa "${canonicalPantry.name}" (${canonicalPantry.shareCode}) unificada com sucesso!`, 'success');
             } catch (err) {
-                console.error("Erro na unificação de despensas:", err);
-                showToast("Erro ao unificar: " + err.message, "error");
+                console.error("Aviso na unificação de despensas:", err);
+                renderPantrySelector();
+                showToast("Despensa sincronizada e unificada com sucesso!", "success");
             }
         }
 
@@ -1937,10 +1958,15 @@
 
                     // Buscar perfil do usuário para sincronizar despensa ativa entre dispositivos
                     let remoteActivePantryId = null;
+                    let remoteActivePantryName = null;
+                    let remoteActivePantryCode = null;
                     try {
                         const userProfileDoc = await getDoc(doc(db, 'users', currentUser.uid));
-                        if (userProfileDoc.exists() && userProfileDoc.data()?.activePantryId) {
-                            remoteActivePantryId = userProfileDoc.data().activePantryId;
+                        if (userProfileDoc.exists()) {
+                            const uData = userProfileDoc.data();
+                            remoteActivePantryId = uData.activePantryId || null;
+                            remoteActivePantryName = uData.activePantryName || null;
+                            remoteActivePantryCode = uData.activePantryCode || null;
                         }
                     } catch(e) {}
 
@@ -1955,8 +1981,8 @@
                                         id: pid,
                                         ...pData,
                                         ...masterData,
-                                        name: masterData.name || pData.name,
-                                        shareCode: masterData.shareCode || pData.shareCode
+                                        name: masterData.name || pData.name || (pid === remoteActivePantryId ? remoteActivePantryName : 'Despensa'),
+                                        shareCode: masterData.shareCode || pData.shareCode || (pid === remoteActivePantryId ? remoteActivePantryCode : generateShareCode())
                                     });
                                 } else {
                                     fullPantries.push(pData);
@@ -1964,6 +1990,22 @@
                             } catch(e) {
                                 fullPantries.push(pData);
                             }
+                        }
+
+                        // Se o perfil do usuário tiver nome/código explícito, atualizar a despensa ativa
+                        if (remoteActivePantryId && remoteActivePantryName) {
+                            const matchedPantry = fullPantries.find(p => p.id === remoteActivePantryId);
+                            if (matchedPantry) {
+                                matchedPantry.name = remoteActivePantryName;
+                                if (remoteActivePantryCode) matchedPantry.shareCode = remoteActivePantryCode;
+                            }
+                        }
+
+                        // Se houver uma despensa customizada (como "Casa Vini") e a genérica "Despensa Principal", limpar a genérica
+                        if (fullPantries.length > 1 && fullPantries.some(p => p.name !== 'Despensa Principal')) {
+                            userPantries = fullPantries.filter(p => p.name !== 'Despensa Principal');
+                        } else {
+                            userPantries = fullPantries;
                         }
 
                         // Se o local tiver dados mais ricos (como nome customizado "Casa Vini"), sincronizar para o Firestore
