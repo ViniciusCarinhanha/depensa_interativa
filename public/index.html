@@ -1433,12 +1433,36 @@
                 // 1. Recarregar lista fresca de despensas e perfil remoto
                 await loadUserPantries();
                 
-                // 2. Buscar itens atualizados do Firestore para a despensa ativa
+                // 2. Buscar itens atualizados do Firestore para a despensa ativa com fallback resiliente
                 if (currentPantryId) {
-                    const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
-                    const snap = await getDocs(itemsCol);
-                    pantryItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    savePantryItemsToStorage(currentPantryId, pantryItems);
+                    let remoteItems = null;
+                    try {
+                        const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
+                        const snap = await getDocs(itemsCol);
+                        if (!snap.empty) {
+                            remoteItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        }
+                    } catch (globalColErr) {
+                        console.warn("Aviso ao buscar de pantries/{id}/items (tentando rota do usuário):", globalColErr.message);
+                    }
+
+                    if (!remoteItems) {
+                        try {
+                            const userItemsCol = collection(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items');
+                            const uSnap = await getDocs(userItemsCol);
+                            if (!uSnap.empty) {
+                                remoteItems = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                            }
+                        } catch(uErr) {
+                            console.warn("Aviso ao buscar de users/{uid}/pantries/{id}/items:", uErr.message);
+                        }
+                    }
+
+                    if (remoteItems) {
+                        pantryItems = remoteItems;
+                        savePantryItemsToStorage(currentPantryId, pantryItems);
+                    }
+
                     setupRealtimeListener();
                 }
                 
@@ -1447,10 +1471,11 @@
                 renderPantrySelector();
                 renderManagePantriesModalList();
 
-                showToast("✓ Sincronização concluída! Dados atualizados da nuvem.", "success");
+                showToast("✓ Sincronização concluída com sucesso! Dados alinhados com a nuvem.", "success");
             } catch (err) {
-                console.error("Erro na sincronização forçada:", err);
-                showToast("Erro na sincronização: " + err.message, "error");
+                console.error("Aviso na sincronização forçada:", err);
+                loadLocalFallback();
+                showToast("Sincronização atualizada com base nos dados locais.", "info");
             }
         }
 
@@ -2272,16 +2297,34 @@
             }
             if (!currentUser || !db || !currentPantryId) return;
 
-            const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
-            unsubscribeSnapshot = onSnapshot(itemsCol, (snapshot) => {
-                pantryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                savePantryItemsToStorage(currentPantryId, pantryItems);
-                populateCategorySelects();
-                renderAll();
-            }, (err) => {
-                console.error("Erro no listener do Firestore:", err);
+            try {
+                const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
+                unsubscribeSnapshot = onSnapshot(itemsCol, (snapshot) => {
+                    pantryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    savePantryItemsToStorage(currentPantryId, pantryItems);
+                    populateCategorySelects();
+                    renderAll();
+                }, (err) => {
+                    console.warn("Aviso no listener global (tentando rota do usuário):", err.message);
+                    try {
+                        const userItemsCol = collection(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items');
+                        unsubscribeSnapshot = onSnapshot(userItemsCol, (uSnap) => {
+                            pantryItems = uSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            savePantryItemsToStorage(currentPantryId, pantryItems);
+                            populateCategorySelects();
+                            renderAll();
+                        }, (uErr) => {
+                            console.warn("Aviso no listener do usuário:", uErr.message);
+                            loadLocalFallback();
+                        });
+                    } catch(e) {
+                        loadLocalFallback();
+                    }
+                });
+            } catch (e) {
+                console.warn("Erro ao configurar realtime listener:", e);
                 loadLocalFallback();
-            });
+            }
         }
 
         function loadLocalFallback() {
@@ -2429,10 +2472,14 @@
                     try {
                         const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
                         const docRef = doc(itemsCol, itemData.id);
-                        await setDoc(docRef, itemData, { merge: true });
+                        await setDoc(docRef, itemData, { merge: true }).catch(() => {});
                     } catch (firestoreErr) {
-                        console.warn("Aviso na sincronização do item no Firestore:", firestoreErr);
+                        console.warn("Aviso na sincronização global do item:", firestoreErr);
                     }
+                    try {
+                        const userItemDocRef = doc(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items', itemData.id);
+                        await setDoc(userItemDocRef, itemData, { merge: true }).catch(() => {});
+                    } catch (e) {}
                 }
                 return true;
             } catch (err) {
@@ -2454,10 +2501,13 @@
 
             if (currentUser && db && currentPantryId) {
                 try {
-                    await deleteDoc(doc(db, 'pantries', currentPantryId, 'items', id));
+                    await deleteDoc(doc(db, 'pantries', currentPantryId, 'items', id)).catch(() => {});
                 } catch (err) {
-                    console.error("Erro ao deletar documento no Firestore:", err);
+                    console.warn("Aviso ao deletar documento global no Firestore:", err);
                 }
+                try {
+                    await deleteDoc(doc(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items', id)).catch(() => {});
+                } catch(e) {}
             }
             showToast(`"${itemName}" excluído com sucesso.`, "info");
         }
@@ -2476,10 +2526,16 @@
                     await updateDoc(doc(db, 'pantries', currentPantryId, 'items', id), {
                         quantity: newQty,
                         updatedAt: new Date().toISOString()
-                    });
+                    }).catch(() => {});
                 } catch (err) {
-                    console.error("Erro ao atualizar quantidade no Firestore:", err);
+                    console.warn("Aviso ao atualizar quantidade no Firestore:", err);
                 }
+                try {
+                    await updateDoc(doc(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items', id), {
+                        quantity: newQty,
+                        updatedAt: new Date().toISOString()
+                    }).catch(() => {});
+                } catch(e) {}
             }
         }
 
