@@ -51,10 +51,10 @@
 
     <!-- Top Application Header -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div class="app-header-container flex flex-wrap justify-between items-center gap-3">
-                <!-- Bloco Esquerdo: Logo & Status da Nuvem -->
-                <div class="flex items-center gap-3 flex-shrink-0">
+                <!-- Bloco Esquerdo: Logo, Status da Nuvem & Seletor de Despensa -->
+                <div class="flex items-center gap-3 flex-wrap flex-shrink-0">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-200 flex-shrink-0">
                         <i class="fa-solid fa-boxes-packing text-lg"></i>
                     </div>
@@ -66,6 +66,38 @@
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 font-medium hidden sm:block">Controle de Estoque & IA em Tempo Real</p>
+                    </div>
+
+                    <!-- Seletor Dropdown de Despensas Compartilhadas -->
+                    <div class="relative ml-0 sm:ml-2">
+                        <button id="btnPantrySelector" onclick="togglePantryDropdown()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold border border-slate-300 shadow-2xs transition flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-house-chimney text-emerald-600"></i>
+                            <span id="current-pantry-name" class="max-w-[110px] sm:max-w-[160px] truncate">Despensa Principal</span>
+                            <span id="current-pantry-badge" class="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold tracking-wider">DSP-PRINC</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                        </button>
+                        
+                        <!-- Menu Dropdown -->
+                        <div id="pantry-dropdown-menu" class="hidden absolute left-0 mt-1.5 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2 space-y-1 animate-fade-in">
+                            <div class="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex justify-between items-center">
+                                <span>Suas Despensas</span>
+                                <span id="pantry-count-badge" class="text-slate-500 font-semibold">1 lista</span>
+                            </div>
+                            <div id="pantry-list-items" class="max-h-48 overflow-y-auto custom-scrollbar space-y-1 py-1">
+                                <!-- Preenchido dinamicamente via JS -->
+                            </div>
+                            <div class="pt-2 border-t border-slate-100 space-y-1">
+                                <button onclick="openCreatePantryModal()" class="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition flex items-center gap-2 cursor-pointer">
+                                    <i class="fa-solid fa-plus-circle text-emerald-600"></i> Criar Nova Despensa
+                                </button>
+                                <button onclick="openJoinPantryModal()" class="w-full text-left px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 rounded-lg transition flex items-center gap-2 cursor-pointer">
+                                    <i class="fa-solid fa-link text-indigo-600"></i> Entrar com Código
+                                </button>
+                                <button onclick="openSharePantryModal()" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-2 cursor-pointer">
+                                    <i class="fa-solid fa-share-nodes text-slate-500"></i> Compartilhar Despensa Atual
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -324,6 +356,7 @@
 
         <!-- TAB 4: ANALYTICS VIEW -->
         <section id="tab-analytics" class="hidden space-y-6 animate-fade-in">
+            <!-- Gráficos Principais -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
                     <h3 class="font-bold text-slate-800 text-sm">Distribuição por Categoria</h3>
@@ -337,6 +370,27 @@
                     <div class="h-64 flex items-center justify-center">
                         <canvas id="chart-expiry"></canvas>
                     </div>
+                </div>
+            </div>
+
+            <!-- Evolução de Preços dos Produtos -->
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-emerald-600"></i> Histórico de Preços por Produto
+                        </h3>
+                        <p class="text-xs text-slate-500">Selecione um item da despensa para analisar a variação do preço ao longo do tempo.</p>
+                    </div>
+                    <div class="w-full sm:w-72">
+                        <select id="analytics-price-item-select" onchange="renderAnalyticsPriceChart()" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-slate-50">
+                            <!-- Preenchido dinamicamente via JS -->
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="h-64 sm:h-72 flex items-center justify-center">
+                    <canvas id="chart-price-analytics"></canvas>
                 </div>
             </div>
         </section>
@@ -546,6 +600,194 @@
         </div>
     </div>
 
+    <!-- MODAL: HISTÓRICO DE PREÇOS -->
+    <div id="price-history-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="app-modal-box bg-white rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
+            <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-chart-line text-emerald-400 text-lg"></i>
+                    <div>
+                        <h3 id="price-history-item-name" class="font-bold text-base">Histórico de Preços</h3>
+                        <p id="price-history-item-category" class="text-xs text-slate-300">Categoria</p>
+                    </div>
+                </div>
+                <button onclick="closePriceHistoryModal()" class="text-slate-400 hover:text-white text-lg p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5 max-h-[82vh] overflow-y-auto custom-scrollbar">
+                <!-- Cards de Métricas -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/70 text-center">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Preço Atual</span>
+                        <span id="price-metric-current" class="text-sm sm:text-base font-extrabold text-slate-800">R$ 0,00</span>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
+                        <span class="text-[10px] uppercase font-bold text-emerald-600 block">Menor Preço</span>
+                        <span id="price-metric-min" class="text-sm sm:text-base font-extrabold text-emerald-700">R$ 0,00</span>
+                    </div>
+                    <div class="bg-rose-50 p-3 rounded-xl border border-rose-100 text-center">
+                        <span class="text-[10px] uppercase font-bold text-rose-600 block">Maior Preço</span>
+                        <span id="price-metric-max" class="text-sm sm:text-base font-extrabold text-rose-700">R$ 0,00</span>
+                    </div>
+                    <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-center">
+                        <span class="text-[10px] uppercase font-bold text-indigo-600 block">Variação Total</span>
+                        <span id="price-metric-diff" class="text-sm sm:text-base font-extrabold text-indigo-700">0%</span>
+                    </div>
+                </div>
+
+                <!-- Gráfico do Item -->
+                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                    <h4 class="text-xs font-bold text-slate-600 uppercase">Curva de Variação Temporal</h4>
+                    <div class="h-48 sm:h-56 flex items-center justify-center">
+                        <canvas id="chart-item-price-history"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabela de Registros e Inserção Retroativa -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Registros Gravados</h4>
+                        <span class="text-[11px] text-slate-400">Ordenado por data</span>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-xl overflow-hidden">
+                        <table class="w-full text-xs text-left">
+                            <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">Data da Compra / Registro</th>
+                                    <th class="p-2.5 text-right">Preço</th>
+                                    <th class="p-2.5 text-center">Variação</th>
+                                    <th class="p-2.5 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="price-history-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Inserir Registro Manual Retroativo -->
+                    <form onsubmit="handleAddPriceHistoryEntry(event)" class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-bold text-slate-600 w-full sm:w-auto">Adicionar Registro:</span>
+                        <input type="date" id="new-price-history-date" required class="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <div class="relative flex-1 min-w-[110px]">
+                            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">R$</span>
+                            <input type="number" id="new-price-history-value" step="0.01" min="0.01" placeholder="0,00" required class="w-full pl-8 pr-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1">
+                            <i class="fa-solid fa-plus"></i> Inserir
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: COMPARTILHAR DESPENSA -->
+    <div id="share-pantry-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
+            <div class="bg-emerald-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-share-nodes text-emerald-300 text-lg"></i>
+                    <h3 class="font-bold text-base">Compartilhar Despensa</h3>
+                </div>
+                <button onclick="closeSharePantryModal()" class="text-emerald-200 hover:text-white text-lg p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="text-center space-y-1">
+                    <span id="share-modal-pantry-name" class="font-bold text-slate-800 text-lg block">Despensa Principal</span>
+                    <p class="text-xs text-slate-500">Compartilhe o código abaixo com familiares ou colegas para que todos possam sincronizar e atualizar esta despensa em tempo real.</p>
+                </div>
+
+                <!-- Código em Destaque -->
+                <div class="bg-emerald-50 border-2 border-dashed border-emerald-300 rounded-2xl p-4 text-center space-y-2">
+                    <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-widest block">Código de Compartilhamento</span>
+                    <div id="share-modal-code-display" class="font-mono text-2xl sm:text-3xl font-black text-emerald-700 tracking-wider select-all py-1">
+                        DSP-XXXX
+                    </div>
+                    <button onclick="copyPantryShareCode()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer">
+                        <i class="fa-regular fa-copy"></i> Copiar Código
+                    </button>
+                </div>
+
+                <div class="space-y-2 pt-1">
+                    <button onclick="sharePantryViaWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-xs transition flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer">
+                        <i class="fa-brands fa-whatsapp text-base"></i> Enviar Convite no WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ENTRAR EM DESPENSA COM CÓDIGO -->
+    <div id="join-pantry-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
+            <div class="bg-indigo-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-link text-indigo-300 text-lg"></i>
+                    <h3 class="font-bold text-base">Entrar em uma Despensa</h3>
+                </div>
+                <button onclick="closeJoinPantryModal()" class="text-indigo-200 hover:text-white text-lg p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleJoinPantry(event)" class="p-6 space-y-4">
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Insira o código de compartilhamento da despensa para acessá-la e participar da lista em tempo real.
+                </p>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase">Código da Despensa</label>
+                    <input type="text" id="join-pantry-code-input" placeholder="Ex: DSP-9X4K2" required class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-base font-mono font-bold uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:outline-none text-center">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeJoinPantryModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">Cancelar</button>
+                    <button type="submit" id="btnConfirmJoinPantry" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-to-bracket"></i> Acessar Despensa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CRIAR NOVA DESPENSA -->
+    <div id="create-pantry-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="app-modal-box bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
+            <div class="bg-emerald-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked text-emerald-300 text-lg"></i>
+                    <h3 class="font-bold text-base">Nova Lista de Despensa</h3>
+                </div>
+                <button onclick="closeCreatePantryModal()" class="text-emerald-200 hover:text-white text-lg p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleCreatePantry(event)" class="p-6 space-y-4">
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Crie listas separadas para diferentes locais (ex: "Casa de Praia", "Escritório", "Despensa da Cozinha"). Cada lista terá seu próprio código de compartilhamento.
+                </p>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-slate-600 uppercase">Nome da Despensa</label>
+                    <input type="text" id="create-pantry-name-input" placeholder="Ex: Casa de Praia" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeCreatePantryModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">Cancelar</button>
+                    <button type="submit" id="btnConfirmCreatePantry" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Criar Despensa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -553,7 +795,7 @@
     <script type="module">
         import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, deleteDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase Configuration (controle-de-despensa-2)
         const firebaseConfig = {
@@ -638,24 +880,117 @@
         }
 
         const INITIAL_SAMPLE_DATA = [
-            { id: 'sample-1', name: 'Arroz Agulhinha Tipo 1', category: 'Grãos e Cereais', location: 'Armário Principal', quantity: 3, unit: 'kg', minQuantity: 2, expiry: getRelativeDate(180), price: 6.50 },
-            { id: 'sample-2', name: 'Feijão Carioca', category: 'Grãos e Cereais', location: 'Armário Principal', quantity: 2, unit: 'kg', minQuantity: 1, expiry: getRelativeDate(120), price: 8.90 },
-            { id: 'sample-3', name: 'Leite Integral', category: 'Laticínios e Frios', location: 'Geladeira', quantity: 1, unit: 'L', minQuantity: 3, expiry: getRelativeDate(5), price: 4.80 },
-            { id: 'sample-4', name: 'Café Torrado e Moído', category: 'Padaria e Matinais', location: 'Armário Principal', quantity: 2, unit: 'pct', minQuantity: 1, expiry: getRelativeDate(90), price: 16.50 },
-            { id: 'sample-5', name: 'Azeite de Oliva Extra Virgem', category: 'Molhos e Condimentos', location: 'Armário Principal', quantity: 1, unit: 'un', minQuantity: 1, expiry: getRelativeDate(240), price: 32.00 }
+            { 
+                id: 'sample-1', 
+                name: 'Arroz Agulhinha Tipo 1', 
+                category: 'Grãos e Cereais', 
+                location: 'Armário Principal', 
+                quantity: 3, 
+                unit: 'kg', 
+                minQuantity: 2, 
+                expiry: getRelativeDate(180), 
+                price: 6.50,
+                priceHistory: [
+                    { date: getRelativeDate(-90), price: 5.40 },
+                    { date: getRelativeDate(-60), price: 5.90 },
+                    { date: getRelativeDate(-30), price: 6.20 },
+                    { date: getRelativeDate(0), price: 6.50 }
+                ]
+            },
+            { 
+                id: 'sample-2', 
+                name: 'Feijão Carioca', 
+                category: 'Grãos e Cereais', 
+                location: 'Armário Principal', 
+                quantity: 2, 
+                unit: 'kg', 
+                minQuantity: 1, 
+                expiry: getRelativeDate(120), 
+                price: 8.90,
+                priceHistory: [
+                    { date: getRelativeDate(-90), price: 9.80 },
+                    { date: getRelativeDate(-45), price: 9.20 },
+                    { date: getRelativeDate(0), price: 8.90 }
+                ]
+            },
+            { 
+                id: 'sample-3', 
+                name: 'Leite Integral', 
+                category: 'Laticínios e Frios', 
+                location: 'Geladeira', 
+                quantity: 1, 
+                unit: 'L', 
+                minQuantity: 3, 
+                expiry: getRelativeDate(5), 
+                price: 4.80,
+                priceHistory: [
+                    { date: getRelativeDate(-60), price: 4.20 },
+                    { date: getRelativeDate(-20), price: 4.50 },
+                    { date: getRelativeDate(0), price: 4.80 }
+                ]
+            },
+            { 
+                id: 'sample-4', 
+                name: 'Café Torrado e Moído', 
+                category: 'Padaria e Matinais', 
+                location: 'Armário Principal', 
+                quantity: 2, 
+                unit: 'pct', 
+                minQuantity: 1, 
+                expiry: getRelativeDate(90), 
+                price: 16.50,
+                priceHistory: [
+                    { date: getRelativeDate(-120), price: 14.00 },
+                    { date: getRelativeDate(-60), price: 15.20 },
+                    { date: getRelativeDate(0), price: 16.50 }
+                ]
+            },
+            { 
+                id: 'sample-5', 
+                name: 'Azeite de Oliva Extra Virgem', 
+                category: 'Molhos e Condimentos', 
+                location: 'Armário Principal', 
+                quantity: 1, 
+                unit: 'un', 
+                minQuantity: 1, 
+                expiry: getRelativeDate(240), 
+                price: 32.00,
+                priceHistory: [
+                    { date: getRelativeDate(-90), price: 28.50 },
+                    { date: getRelativeDate(-40), price: 30.00 },
+                    { date: getRelativeDate(0), price: 32.00 }
+                ]
+            }
         ];
 
         // State Variables
         let currentUser = null;
         let pantryItems = [];
+        let currentPantryId = 'default_local';
+        let userPantries = [
+            { id: 'default_local', name: 'Despensa Principal', shareCode: 'DSP-PRINC', role: 'owner' }
+        ];
+        let currentPriceHistoryItemId = null;
         let unsubscribeSnapshot = null;
         let sortField = 'name';
         let sortDirection = 'asc';
         let chartCategoryInstance = null;
         let chartExpiryInstance = null;
+        let chartItemPriceHistoryInstance = null;
+        let chartAnalyticsPriceInstance = null;
         let scannedBase64Image = null;
         let scannedMimeType = 'image/jpeg';
         let detectedScannedItems = [];
+
+        // Helper para Gerar Código Único de Compartilhamento
+        function generateShareCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = 'DSP-';
+            for (let i = 0; i < 5; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
 
         // Universal Gemini API Caller com suporte a chaves AQ (query param + header) e Fallback de Modelos
         async function callGeminiApi(promptText, base64Image = null, mimeType = "image/jpeg") {
@@ -712,7 +1047,621 @@
             throw lastError;
         }
 
-        // Firebase Auth Lifecycle
+        // =========================================================================
+        // GERENCIAMENTO DE MÚLTIPLAS DESPENSAS & COMPARTILHAMENTO
+        // =========================================================================
+        function togglePantryDropdown() {
+            const menu = document.getElementById('pantry-dropdown-menu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            const selector = document.getElementById('btnPantrySelector');
+            const menu = document.getElementById('pantry-dropdown-menu');
+            if (menu && selector && !selector.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function renderPantrySelector() {
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-PRINC' };
+            const nameEl = document.getElementById('current-pantry-name');
+            const badgeEl = document.getElementById('current-pantry-badge');
+            const countEl = document.getElementById('pantry-count-badge');
+            const listEl = document.getElementById('pantry-list-items');
+
+            if (nameEl) nameEl.innerText = currentPantry.name;
+            if (badgeEl) badgeEl.innerText = currentPantry.shareCode || 'DSP-PRINC';
+            if (countEl) countEl.innerText = `${userPantries.length} ${userPantries.length === 1 ? 'lista' : 'listas'}`;
+
+            if (listEl) {
+                listEl.innerHTML = '';
+                userPantries.forEach(p => {
+                    const isSelected = p.id === currentPantryId;
+                    const itemBtn = document.createElement('button');
+                    itemBtn.className = `w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition cursor-pointer ${isSelected ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200' : 'text-slate-700 hover:bg-slate-50 font-medium'}`;
+                    itemBtn.innerHTML = `
+                        <div class="flex items-center gap-2 truncate mr-2">
+                            <i class="fa-solid fa-house-chimney ${isSelected ? 'text-emerald-600' : 'text-slate-400'} text-xs"></i>
+                            <span class="truncate">${p.name}</span>
+                        </div>
+                        <span class="font-mono text-[10px] ${isSelected ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-100 text-slate-500'} px-1.5 py-0.5 rounded flex-shrink-0 font-bold">${p.shareCode || 'DSP'}</span>
+                    `;
+                    itemBtn.onclick = () => switchPantry(p.id);
+                    listEl.appendChild(itemBtn);
+                });
+            }
+        }
+
+        async function switchPantry(pantryId) {
+            if (currentPantryId === pantryId) {
+                const menu = document.getElementById('pantry-dropdown-menu');
+                if (menu) menu.classList.add('hidden');
+                return;
+            }
+
+            currentPantryId = pantryId;
+            localStorage.setItem('active_pantry_id', pantryId);
+            
+            const menu = document.getElementById('pantry-dropdown-menu');
+            if (menu) menu.classList.add('hidden');
+
+            renderPantrySelector();
+            
+            if (currentUser && db) {
+                setupRealtimeListener();
+            } else {
+                loadLocalFallback();
+            }
+
+            const activePantry = userPantries.find(p => p.id === pantryId);
+            showToast(`Despensa ativa: ${activePantry ? activePantry.name : 'Despensa'}`, 'info');
+        }
+
+        function openCreatePantryModal() {
+            togglePantryDropdown();
+            document.getElementById('create-pantry-name-input').value = '';
+            document.getElementById('create-pantry-modal').classList.remove('hidden');
+        }
+
+        function closeCreatePantryModal() {
+            document.getElementById('create-pantry-modal').classList.add('hidden');
+        }
+
+        async function handleCreatePantry(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('create-pantry-name-input');
+            const name = (nameInput ? nameInput.value : '').trim();
+            if (!name) {
+                showToast("Informe o nome da despensa.", "error");
+                return;
+            }
+
+            const newCode = generateShareCode();
+            const newPantryId = 'pantry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+
+            const pantryObj = {
+                id: newPantryId,
+                name: name,
+                shareCode: newCode,
+                ownerUid: currentUser ? currentUser.uid : 'local_user',
+                ownerName: currentUser ? (currentUser.displayName || 'Usuário') : 'Usuário Local',
+                members: currentUser ? [currentUser.uid] : ['local_user'],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            if (currentUser && db) {
+                try {
+                    await setDoc(doc(db, 'pantries', newPantryId), pantryObj);
+                    await setDoc(doc(db, 'users', currentUser.uid, 'pantries', newPantryId), {
+                        pantryId: newPantryId,
+                        name: name,
+                        shareCode: newCode,
+                        role: 'owner',
+                        joinedAt: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error("Erro ao criar despensa no Firestore:", err);
+                }
+            }
+
+            userPantries.push(pantryObj);
+            localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
+            closeCreatePantryModal();
+            
+            await switchPantry(newPantryId);
+            showToast(`Nova despensa "${name}" criada com sucesso!`, 'success');
+            openSharePantryModal();
+        }
+
+        function openJoinPantryModal() {
+            togglePantryDropdown();
+            document.getElementById('join-pantry-code-input').value = '';
+            document.getElementById('join-pantry-modal').classList.remove('hidden');
+        }
+
+        function closeJoinPantryModal() {
+            document.getElementById('join-pantry-modal').classList.add('hidden');
+        }
+
+        async function handleJoinPantry(e) {
+            e.preventDefault();
+            const codeInput = document.getElementById('join-pantry-code-input');
+            const rawCode = (codeInput ? codeInput.value : '').trim().toUpperCase();
+            if (!rawCode) {
+                showToast("Digite o código da despensa.", "error");
+                return;
+            }
+
+            const code = rawCode.startsWith('DSP-') ? rawCode : `DSP-${rawCode.replace(/[^A-Z0-9]/g, '')}`;
+
+            // Verificar se já participa
+            const alreadyJoined = userPantries.find(p => (p.shareCode || '').toUpperCase() === code);
+            if (alreadyJoined) {
+                closeJoinPantryModal();
+                await switchPantry(alreadyJoined.id);
+                showToast(`Você já está na despensa "${alreadyJoined.name}".`, 'info');
+                return;
+            }
+
+            if (currentUser && db) {
+                try {
+                    const q = query(collection(db, 'pantries'), where('shareCode', '==', code));
+                    const snapshot = await getDocs(q);
+
+                    if (snapshot.empty) {
+                        showToast("Código de despensa não encontrado. Verifique e tente novamente.", "error");
+                        return;
+                    }
+
+                    const pantryDoc = snapshot.docs[0];
+                    const pantryData = pantryDoc.data();
+                    const pantryId = pantryDoc.id;
+
+                    // Adicionar UID aos membros
+                    await updateDoc(doc(db, 'pantries', pantryId), {
+                        members: arrayUnion(currentUser.uid),
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    // Vincular ao perfil do usuário
+                    await setDoc(doc(db, 'users', currentUser.uid, 'pantries', pantryId), {
+                        pantryId: pantryId,
+                        name: pantryData.name,
+                        shareCode: pantryData.shareCode,
+                        role: 'member',
+                        joinedAt: new Date().toISOString()
+                    });
+
+                    const pantryObj = {
+                        id: pantryId,
+                        name: pantryData.name,
+                        shareCode: pantryData.shareCode,
+                        ownerUid: pantryData.ownerUid,
+                        ownerName: pantryData.ownerName,
+                        role: 'member'
+                    };
+
+                    userPantries.push(pantryObj);
+                    localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
+
+                    closeJoinPantryModal();
+                    await switchPantry(pantryId);
+                    showToast(`Conectado à despensa "${pantryData.name}" com sucesso!`, 'success');
+                } catch (err) {
+                    console.error("Erro ao entrar na despensa compartilhada:", err);
+                    showToast(`Erro ao conectar: ${err.message}`, "error");
+                }
+            } else {
+                // Modo offline: simulação
+                const mockPantry = {
+                    id: 'joined_' + Date.now(),
+                    name: `Despensa (${code})`,
+                    shareCode: code,
+                    role: 'member'
+                };
+                userPantries.push(mockPantry);
+                localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
+                closeJoinPantryModal();
+                await switchPantry(mockPantry.id);
+                showToast(`Despensa com código ${code} conectada localmente!`, 'success');
+            }
+        }
+
+        function openSharePantryModal() {
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-PRINC' };
+            const nameEl = document.getElementById('share-modal-pantry-name');
+            const codeEl = document.getElementById('share-modal-code-display');
+
+            if (nameEl) nameEl.innerText = currentPantry.name;
+            if (codeEl) codeEl.innerText = currentPantry.shareCode || 'DSP-PRINC';
+
+            document.getElementById('share-pantry-modal').classList.remove('hidden');
+        }
+
+        function closeSharePantryModal() {
+            document.getElementById('share-pantry-modal').classList.add('hidden');
+        }
+
+        function copyPantryShareCode() {
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { shareCode: 'DSP-PRINC' };
+            const code = currentPantry.shareCode || 'DSP-PRINC';
+            
+            navigator.clipboard.writeText(code).then(() => {
+                showToast(`Código ${code} copiado para a área de transferência!`, 'success');
+            }).catch(() => {
+                const temp = document.createElement('textarea');
+                temp.value = code;
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand('copy');
+                document.body.removeChild(temp);
+                showToast(`Código ${code} copiado!`, 'success');
+            });
+        }
+
+        function sharePantryViaWhatsApp() {
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-PRINC' };
+            const name = currentPantry.name;
+            const code = currentPantry.shareCode || 'DSP-PRINC';
+            const msg = encodeURIComponent(`Olá! Convido você a participar da minha lista na *Despensa Inteligente* (*${name}*).\n\nUse o código de acesso: *${code}* para sincronizar e gerenciar nossos itens em tempo real! 🛒`);
+            window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+        }
+
+        async function loadUserPantries() {
+            if (currentUser && db) {
+                try {
+                    // Buscar despensas onde o usuário é membro
+                    const q = query(collection(db, 'pantries'), where('members', 'array-contains', currentUser.uid));
+                    const snapshot = await getDocs(q);
+
+                    if (!snapshot.empty) {
+                        userPantries = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    } else {
+                        // Criar despensa padrão se não possuir nenhuma
+                        const defaultCode = generateShareCode();
+                        const defaultId = 'pantry_' + currentUser.uid.substring(0, 8);
+                        const defaultPantry = {
+                            id: defaultId,
+                            name: 'Despensa Principal',
+                            shareCode: defaultCode,
+                            ownerUid: currentUser.uid,
+                            ownerName: currentUser.displayName || 'Usuário',
+                            members: [currentUser.uid],
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        };
+                        await setDoc(doc(db, 'pantries', defaultId), defaultPantry);
+                        userPantries = [defaultPantry];
+                    }
+
+                    // Restaurar despensa ativa salva
+                    const savedPantryId = localStorage.getItem('active_pantry_id');
+                    if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
+                        currentPantryId = savedPantryId;
+                    } else {
+                        currentPantryId = userPantries[0].id;
+                    }
+                } catch (err) {
+                    console.error("Erro ao carregar despensas do usuário:", err);
+                }
+            } else {
+                const local = localStorage.getItem('local_user_pantries');
+                if (local) {
+                    try {
+                        userPantries = JSON.parse(local);
+                    } catch(e) {
+                        userPantries = [{ id: 'default_local', name: 'Despensa Principal', shareCode: 'DSP-PRINC', role: 'owner' }];
+                    }
+                } else {
+                    userPantries = [{ id: 'default_local', name: 'Despensa Principal', shareCode: 'DSP-PRINC', role: 'owner' }];
+                }
+
+                const savedPantryId = localStorage.getItem('active_pantry_id');
+                if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
+                    currentPantryId = savedPantryId;
+                } else {
+                    currentPantryId = userPantries[0].id;
+                }
+            }
+
+            renderPantrySelector();
+        }
+
+        // =========================================================================
+        // HISTÓRICO DE PREÇOS & GRÁFICOS DE VARIAÇÃO
+        // =========================================================================
+        function calcPriceVariation(priceHistory) {
+            if (!Array.isArray(priceHistory) || priceHistory.length === 0) {
+                return { current: 0, min: 0, max: 0, diffPercent: 0, direction: 'neutral' };
+            }
+            const sorted = [...priceHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const prices = sorted.map(p => parseFloat(p.price) || 0).filter(p => p > 0);
+            if (prices.length === 0) {
+                return { current: 0, min: 0, max: 0, diffPercent: 0, direction: 'neutral' };
+            }
+            const current = prices[prices.length - 1];
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+
+            let diffPercent = 0;
+            let direction = 'neutral';
+            if (prices.length >= 2) {
+                const first = prices[0];
+                if (first > 0) {
+                    diffPercent = ((current - first) / first) * 100;
+                    if (diffPercent > 0.5) direction = 'up';
+                    else if (diffPercent < -0.5) direction = 'down';
+                }
+            }
+            return { current, min, max, diffPercent, direction };
+        }
+
+        function openPriceHistoryModal(itemId) {
+            const item = pantryItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            currentPriceHistoryItemId = itemId;
+            document.getElementById('price-history-item-name').innerText = `Histórico de Preços: ${item.name}`;
+            document.getElementById('price-history-item-category').innerText = `${item.category} • Local: ${item.location || 'Armário'}`;
+            document.getElementById('new-price-history-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('new-price-history-value').value = (parseFloat(item.price) || 0) > 0 ? (parseFloat(item.price) || 0).toFixed(2) : '';
+
+            renderPriceHistoryModalContent(item);
+            document.getElementById('price-history-modal').classList.remove('hidden');
+        }
+
+        function closePriceHistoryModal() {
+            document.getElementById('price-history-modal').classList.add('hidden');
+            currentPriceHistoryItemId = null;
+        }
+
+        function renderPriceHistoryModalContent(item) {
+            let history = Array.isArray(item.priceHistory) && item.priceHistory.length > 0
+                ? [...item.priceHistory]
+                : (parseFloat(item.price) > 0 ? [{ date: item.expiry || getRelativeDate(-30), price: parseFloat(item.price) }] : []);
+
+            history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const variation = calcPriceVariation(history);
+            const currentVal = (parseFloat(item.price) || (history.length > 0 ? history[history.length - 1].price : 0));
+
+            document.getElementById('price-metric-current').innerText = `R$ ${currentVal.toFixed(2).replace('.', ',')}`;
+            document.getElementById('price-metric-min').innerText = `R$ ${(variation.min || currentVal).toFixed(2).replace('.', ',')}`;
+            document.getElementById('price-metric-max').innerText = `R$ ${(variation.max || currentVal).toFixed(2).replace('.', ',')}`;
+
+            const diffEl = document.getElementById('price-metric-diff');
+            if (variation.direction === 'up') {
+                diffEl.className = 'text-sm sm:text-base font-extrabold text-rose-600';
+                diffEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up"></i> +${Math.abs(variation.diffPercent).toFixed(1)}%`;
+            } else if (variation.direction === 'down') {
+                diffEl.className = 'text-sm sm:text-base font-extrabold text-emerald-600';
+                diffEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down"></i> -${Math.abs(variation.diffPercent).toFixed(1)}%`;
+            } else {
+                diffEl.className = 'text-sm sm:text-base font-extrabold text-slate-700';
+                diffEl.innerHTML = `0.0%`;
+            }
+
+            // Tabela de Registros
+            const tbody = document.getElementById('price-history-table-body');
+            tbody.innerHTML = '';
+
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Nenhum registro de preço gravado para este item.</td></tr>`;
+            } else {
+                history.forEach((h, idx) => {
+                    const prev = idx > 0 ? history[idx - 1].price : null;
+                    let diffBadge = '<span class="text-slate-400">-</span>';
+                    if (prev !== null && prev > 0) {
+                        const d = ((h.price - prev) / prev) * 100;
+                        if (d > 0.5) diffBadge = `<span class="text-rose-500 font-bold bg-rose-50 px-1.5 py-0.5 rounded">+${d.toFixed(1)}%</span>`;
+                        else if (d < -0.5) diffBadge = `<span class="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">${d.toFixed(1)}%</span>`;
+                        else diffBadge = `<span class="text-slate-500 font-medium">0%</span>`;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50';
+                    tr.innerHTML = `
+                        <td class="p-2.5 font-medium text-slate-700">${formatDate(h.date)}</td>
+                        <td class="p-2.5 text-right font-bold text-slate-900">R$ ${(parseFloat(h.price) || 0).toFixed(2).replace('.', ',')}</td>
+                        <td class="p-2.5 text-center text-[11px]">${diffBadge}</td>
+                        <td class="p-2.5 text-right">
+                            <button onclick="handleRemovePriceHistoryEntry(${idx})" class="text-slate-400 hover:text-rose-600 p-1 transition cursor-pointer" title="Excluir este registro">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // Renderizar Gráfico de Linha do Item (Chart.js)
+            const ctx = document.getElementById('chart-item-price-history')?.getContext('2d');
+            if (ctx) {
+                if (chartItemPriceHistoryInstance) chartItemPriceHistoryInstance.destroy();
+
+                const labels = history.map(h => formatDate(h.date));
+                const data = history.map(h => parseFloat(h.price) || 0);
+
+                chartItemPriceHistoryInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels.length > 0 ? labels : ['Sem dados'],
+                        datasets: [{
+                            label: 'Preço (R$)',
+                            data: data.length > 0 ? data : [0],
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#4f46e5',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4.5,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` Preço: R$ ${(context.parsed.y || 0).toFixed(2).replace('.', ',')}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(val) { return `R$ ${val.toFixed(2).replace('.', ',')}`; }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function handleAddPriceHistoryEntry(e) {
+            e.preventDefault();
+            if (!currentPriceHistoryItemId) return;
+            const item = pantryItems.find(i => i.id === currentPriceHistoryItemId);
+            if (!item) return;
+
+            const date = document.getElementById('new-price-history-date').value;
+            const price = parseFloat(document.getElementById('new-price-history-value').value) || 0;
+
+            if (!date || price <= 0) {
+                showToast("Informe uma data e um preço válido.", "error");
+                return;
+            }
+
+            let history = Array.isArray(item.priceHistory) ? [...item.priceHistory] : [];
+            const existingIdx = history.findIndex(h => h.date === date);
+            if (existingIdx >= 0) {
+                history[existingIdx].price = price;
+            } else {
+                history.push({ date, price });
+            }
+
+            history.sort((a, b) => new Date(a.date) - new Date(b.date));
+            item.priceHistory = history;
+
+            // Atualizar o preço atual para o registro cronologicamente mais recente
+            const latest = history[history.length - 1];
+            item.price = latest.price;
+
+            await savePantryItem(item);
+            renderPriceHistoryModalContent(item);
+            showToast("Registro de preço inserido com sucesso!", "success");
+        }
+
+        async function handleRemovePriceHistoryEntry(index) {
+            if (!currentPriceHistoryItemId) return;
+            const item = pantryItems.find(i => i.id === currentPriceHistoryItemId);
+            if (!item || !Array.isArray(item.priceHistory)) return;
+
+            item.priceHistory.splice(index, 1);
+            if (item.priceHistory.length > 0) {
+                item.price = item.priceHistory[item.priceHistory.length - 1].price;
+            }
+
+            await savePantryItem(item);
+            renderPriceHistoryModalContent(item);
+            showToast("Registro de preço removido.", "info");
+        }
+
+        function renderAnalyticsPriceChart() {
+            const select = document.getElementById('analytics-price-item-select');
+            const ctx = document.getElementById('chart-price-analytics')?.getContext('2d');
+            if (!select || !ctx) return;
+
+            // Popular select se vazio ou diferente
+            const itemsWithPrices = pantryItems.filter(i => (parseFloat(i.price) || 0) > 0 || (Array.isArray(i.priceHistory) && i.priceHistory.length > 0));
+            
+            const currentSelected = select.value;
+            select.innerHTML = '';
+
+            if (itemsWithPrices.length === 0) {
+                select.innerHTML = '<option value="">Nenhum item com preço</option>';
+                if (chartAnalyticsPriceInstance) chartAnalyticsPriceInstance.destroy();
+                return;
+            }
+
+            itemsWithPrices.forEach(i => {
+                const opt = document.createElement('option');
+                opt.value = i.id;
+                opt.innerText = `${i.name} (R$ ${(parseFloat(i.price) || 0).toFixed(2)})`;
+                if (i.id === currentSelected) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            const selectedItemId = select.value || itemsWithPrices[0].id;
+            const selectedItem = itemsWithPrices.find(i => i.id === selectedItemId) || itemsWithPrices[0];
+
+            let history = Array.isArray(selectedItem.priceHistory) && selectedItem.priceHistory.length > 0
+                ? [...selectedItem.priceHistory]
+                : [{ date: selectedItem.expiry || getRelativeDate(0), price: parseFloat(selectedItem.price) || 0 }];
+
+            history.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (chartAnalyticsPriceInstance) chartAnalyticsPriceInstance.destroy();
+
+            chartAnalyticsPriceInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: history.map(h => formatDate(h.date)),
+                    datasets: [{
+                        label: `${selectedItem.name} (R$)`,
+                        data: history.map(h => parseFloat(h.price) || 0),
+                        borderColor: '#059669',
+                        backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#059669',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { size: 11, weight: 'bold' } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${selectedItem.name}: R$ ${(context.parsed.y || 0).toFixed(2).replace('.', ',')}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(val) { return `R$ ${val.toFixed(2).replace('.', ',')}`; }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // =========================================================================
+        // FIREBASE AUTH & SINCRONIZAÇÃO EM TEMPO REAL
+        // =========================================================================
         async function loginWithGoogle() {
             if (!auth || !provider) {
                 showToast("Firebase indisponível no momento.", "error");
@@ -723,6 +1672,7 @@
                 if (result && result.user) {
                     currentUser = result.user;
                     updateAuthUI(result.user);
+                    await loadUserPantries();
                     setupRealtimeListener();
                     await syncUserGeminiSettings(result.user);
                 }
@@ -753,6 +1703,7 @@
                     unsubscribeSnapshot = null;
                 }
                 updateAuthUI(null);
+                await loadUserPantries();
                 loadLocalFallback();
                 showToast("Sessão finalizada.", "info");
             } catch (error) {
@@ -792,13 +1743,16 @@
         }
 
         function setupRealtimeListener() {
-            if (!currentUser || !db) return;
-            if (unsubscribeSnapshot) unsubscribeSnapshot();
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+                unsubscribeSnapshot = null;
+            }
+            if (!currentUser || !db || !currentPantryId) return;
 
-            const itemsCol = collection(db, 'users', currentUser.uid, 'items');
+            const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
             unsubscribeSnapshot = onSnapshot(itemsCol, (snapshot) => {
                 pantryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                localStorage.setItem('pantry_local_cache', JSON.stringify(pantryItems));
+                localStorage.setItem(`pantry_cache_${currentPantryId}`, JSON.stringify(pantryItems));
                 renderAll();
             }, (err) => {
                 console.error("Erro no listener do Firestore:", err);
@@ -807,7 +1761,8 @@
         }
 
         function loadLocalFallback() {
-            const cached = localStorage.getItem('pantry_local_cache');
+            const cacheKey = `pantry_cache_${currentPantryId || 'default'}`;
+            const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 try {
                     pantryItems = JSON.parse(cached);
@@ -846,6 +1801,7 @@
         function initAuthAndSync() {
             if (!auth) {
                 updateAuthUI(null);
+                loadUserPantries();
                 loadLocalFallback();
                 return;
             }
@@ -855,6 +1811,7 @@
                 if (result && result.user) {
                     currentUser = result.user;
                     updateAuthUI(result.user);
+                    await loadUserPantries();
                     setupRealtimeListener();
                     await syncUserGeminiSettings(result.user);
                     showToast("Login realizado com sucesso!", "success");
@@ -869,6 +1826,7 @@
                 if (user) {
                     currentUser = user;
                     updateAuthUI(user);
+                    await loadUserPantries();
                     setupRealtimeListener();
                     await syncUserGeminiSettings(user);
                 } else {
@@ -879,16 +1837,38 @@
                         unsubscribeSnapshot = null;
                     }
                     updateAuthUI(null);
+                    await loadUserPantries();
                     loadLocalFallback();
                 }
             });
         }
 
-        // CRUD Operations
+        // =========================================================================
+        // CRUD DE PRODUTOS COM SUPORTE A HISTÓRICO DE PREÇOS
+        // =========================================================================
         async function savePantryItem(itemData) {
-            if (currentUser && db) {
-                const itemsCol = collection(db, 'users', currentUser.uid, 'items');
-                const docRef = itemData.id ? doc(itemsCol, itemData.id) : doc(itemsCol);
+            // Processar e registrar histórico de preços
+            const today = new Date().toISOString().split('T')[0];
+            const priceNum = parseFloat(itemData.price) || 0;
+            
+            let history = Array.isArray(itemData.priceHistory) ? [...itemData.priceHistory] : [];
+            if (priceNum > 0) {
+                if (history.length === 0) {
+                    history.push({ date: today, price: priceNum });
+                } else {
+                    const lastEntry = history[history.length - 1];
+                    if (lastEntry.date === today) {
+                        lastEntry.price = priceNum;
+                    } else if (lastEntry.price !== priceNum) {
+                        history.push({ date: today, price: priceNum });
+                    }
+                }
+            }
+            itemData.priceHistory = history;
+
+            if (currentUser && db && currentPantryId) {
+                const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
+                const docRef = itemData.id && !itemData.id.startsWith('local_') && !itemData.id.startsWith('sample-') ? doc(itemsCol, itemData.id) : doc(itemsCol);
                 const finalData = {
                     ...itemData,
                     id: docRef.id,
@@ -899,21 +1879,22 @@
                 if (itemData.id) {
                     const idx = pantryItems.findIndex(i => i.id === itemData.id);
                     if (idx >= 0) pantryItems[idx] = itemData;
+                    else pantryItems.unshift(itemData);
                 } else {
                     itemData.id = 'local_' + Date.now();
                     pantryItems.unshift(itemData);
                 }
-                localStorage.setItem('pantry_local_cache', JSON.stringify(pantryItems));
+                localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
                 renderAll();
             }
         }
 
         async function removePantryItem(id) {
-            if (currentUser && db) {
-                await deleteDoc(doc(db, 'users', currentUser.uid, 'items', id));
+            if (currentUser && db && currentPantryId) {
+                await deleteDoc(doc(db, 'pantries', currentPantryId, 'items', id));
             } else {
                 pantryItems = pantryItems.filter(i => i.id !== id);
-                localStorage.setItem('pantry_local_cache', JSON.stringify(pantryItems));
+                localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
                 renderAll();
             }
             showToast("Item excluído.", "info");
@@ -924,19 +1905,21 @@
             if (!item) return;
 
             const newQty = Math.max(0, (parseInt(item.quantity) || 0) + delta);
-            if (currentUser && db) {
-                await updateDoc(doc(db, 'users', currentUser.uid, 'items', id), {
+            if (currentUser && db && currentPantryId) {
+                await updateDoc(doc(db, 'pantries', currentPantryId, 'items', id), {
                     quantity: newQty,
                     updatedAt: new Date().toISOString()
                 });
             } else {
                 item.quantity = newQty;
-                localStorage.setItem('pantry_local_cache', JSON.stringify(pantryItems));
+                localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
                 renderAll();
             }
         }
 
-        // UI Rendering Logic
+        // =========================================================================
+        // UI RENDERING LOGIC
+        // =========================================================================
         function renderAll() {
             renderSummaryCards();
             renderPantryTable();
@@ -1053,6 +2036,16 @@
 
             filtered.forEach(item => {
                 const status = getItemStatus(item);
+                
+                // Variação de Preço
+                const variation = calcPriceVariation(item.priceHistory);
+                let priceTrendBadge = '';
+                if (variation.direction === 'up') {
+                    priceTrendBadge = `<span class="text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 flex items-center gap-0.5" title="Subiu ${Math.abs(variation.diffPercent).toFixed(1)}%"><i class="fa-solid fa-arrow-trend-up"></i> +${Math.abs(variation.diffPercent).toFixed(0)}%</span>`;
+                } else if (variation.direction === 'down') {
+                    priceTrendBadge = `<span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 flex items-center gap-0.5" title="Caiu ${Math.abs(variation.diffPercent).toFixed(1)}%"><i class="fa-solid fa-arrow-trend-down"></i> -${Math.abs(variation.diffPercent).toFixed(0)}%</span>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/80 transition';
                 tr.innerHTML = `
@@ -1069,16 +2062,24 @@
                         </div>
                     </td>
                     <td class="px-4 py-3 text-slate-600 font-mono text-xs">${formatDate(item.expiry)}</td>
-                    <td class="px-4 py-3 text-right text-slate-600 hidden sm:table-cell">R$ ${(parseFloat(item.price) || 0).toFixed(2).replace('.', ',')}</td>
+                    <td class="px-4 py-3 text-right text-slate-600 hidden sm:table-cell">
+                        <button onclick="openPriceHistoryModal('${item.id}')" title="Ver histórico de preços" class="group inline-flex items-center gap-1.5 hover:text-indigo-600 font-medium cursor-pointer">
+                            <span>R$ ${(parseFloat(item.price) || 0).toFixed(2).replace('.', ',')}</span>
+                            ${priceTrendBadge}
+                        </button>
+                    </td>
                     <td class="px-4 py-3 text-center">
                         <span class="${status.color} text-[10px] font-bold px-2 py-0.5 rounded-full border">${status.label}</span>
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap">
                         <div class="flex items-center justify-end gap-1">
+                            <button onclick="openPriceHistoryModal('${item.id}')" title="Histórico de Preços" class="p-1.5 text-slate-400 hover:text-indigo-600 transition cursor-pointer">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </button>
                             <button onclick="getConservationTips('${item.id}')" title="Dicas de Conservação IA" class="p-1.5 text-slate-400 hover:text-amber-600 transition cursor-pointer">
                                 <i class="fa-solid fa-lightbulb"></i>
                             </button>
-                            <button onclick="openModal('${item.id}')" title="Editar item" class="p-1.5 text-slate-400 hover:text-indigo-600 transition cursor-pointer">
+                            <button onclick="openModal('${item.id}')" title="Editar item" class="p-1.5 text-slate-400 hover:text-slate-700 transition cursor-pointer">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
                             <button onclick="deleteItem('${item.id}')" title="Excluir item" class="p-1.5 text-slate-400 hover:text-rose-600 transition cursor-pointer">
@@ -1201,6 +2202,8 @@
         async function handleSaveItem(e) {
             e.preventDefault();
             const id = document.getElementById('form-item-id').value;
+            const existingItem = id ? pantryItems.find(i => i.id === id) : null;
+            
             const itemData = {
                 id: id || null,
                 name: document.getElementById('form-name').value.trim(),
@@ -1210,7 +2213,8 @@
                 unit: document.getElementById('form-unit').value,
                 minQuantity: parseInt(document.getElementById('form-min-quantity').value) || 0,
                 expiry: document.getElementById('form-expiry').value,
-                price: parseFloat(document.getElementById('form-price').value) || 0
+                price: parseFloat(document.getElementById('form-price').value) || 0,
+                priceHistory: existingItem && Array.isArray(existingItem.priceHistory) ? existingItem.priceHistory : []
             };
 
             await savePantryItem(itemData);
@@ -1667,6 +2671,8 @@ Retorne APENAS um JSON puro no formato:
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
             });
+
+            renderAnalyticsPriceChart();
         }
 
         // Export and Utilities
@@ -1760,6 +2766,25 @@ Retorne APENAS um JSON puro no formato:
         window.removeGeminiKey = removeGeminiKey;
         window.toggleGeminiKeyVisibility = toggleGeminiKeyVisibility;
         window.callGeminiApi = callGeminiApi;
+        
+        // Novas exportações: Despensas e Histórico de Preços
+        window.togglePantryDropdown = togglePantryDropdown;
+        window.switchPantry = switchPantry;
+        window.openCreatePantryModal = openCreatePantryModal;
+        window.closeCreatePantryModal = closeCreatePantryModal;
+        window.handleCreatePantry = handleCreatePantry;
+        window.openJoinPantryModal = openJoinPantryModal;
+        window.closeJoinPantryModal = closeJoinPantryModal;
+        window.handleJoinPantry = handleJoinPantry;
+        window.openSharePantryModal = openSharePantryModal;
+        window.closeSharePantryModal = closeSharePantryModal;
+        window.copyPantryShareCode = copyPantryShareCode;
+        window.sharePantryViaWhatsApp = sharePantryViaWhatsApp;
+        window.openPriceHistoryModal = openPriceHistoryModal;
+        window.closePriceHistoryModal = closePriceHistoryModal;
+        window.handleAddPriceHistoryEntry = handleAddPriceHistoryEntry;
+        window.handleRemovePriceHistoryEntry = handleRemovePriceHistoryEntry;
+        window.renderAnalyticsPriceChart = renderAnalyticsPriceChart;
 
         // Initialization
         function initializeApp() {
