@@ -78,15 +78,22 @@
                         </button>
                         
                         <!-- Menu Dropdown -->
-                        <div id="pantry-dropdown-menu" class="hidden absolute left-0 mt-1.5 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2 space-y-1 animate-fade-in">
+                        <div id="pantry-dropdown-menu" class="hidden absolute left-0 mt-1.5 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2 space-y-1 animate-fade-in">
                             <div class="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 flex justify-between items-center">
                                 <span>Suas Despensas</span>
                                 <span id="pantry-count-badge" class="text-slate-500 font-semibold">1 lista</span>
                             </div>
-                            <div id="pantry-list-items" class="max-h-48 overflow-y-auto custom-scrollbar space-y-1 py-1">
+                            <div id="pantry-list-items" class="max-h-56 overflow-y-auto custom-scrollbar space-y-1 py-1">
                                 <!-- Preenchido dinamicamente via JS -->
                             </div>
                             <div class="pt-2 border-t border-slate-100 space-y-1">
+                                <button onclick="forceCloudSync()" class="w-full text-left px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 rounded-lg transition flex items-center justify-between cursor-pointer">
+                                    <span class="flex items-center gap-2"><i class="fa-solid fa-rotate text-emerald-600"></i> Forçar Sincronização</span>
+                                    <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Nuvem</span>
+                                </button>
+                                <button onclick="openManagePantriesModal()" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-2 cursor-pointer">
+                                    <i class="fa-solid fa-list-check text-slate-500"></i> Gerenciar / Excluir Despensas
+                                </button>
                                 <button onclick="openCreatePantryModal()" class="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded-lg transition flex items-center gap-2 cursor-pointer">
                                     <i class="fa-solid fa-plus-circle text-emerald-600"></i> Criar Nova Despensa
                                 </button>
@@ -809,6 +816,46 @@
         </div>
     </div>
 
+    <!-- MODAL: GERENCIAR / EXCLUIR DESPENSAS -->
+    <div id="manage-pantries-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="app-modal-box bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-fade-in mx-auto">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-emerald-400 text-lg"></i>
+                    <h3 class="font-bold text-base">Gerenciar Despensas e Listas</h3>
+                </div>
+                <button onclick="closeManagePantriesModal()" class="text-slate-400 hover:text-white text-lg p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-slate-500">
+                        Alterne entre listas, renomeie ou exclua despensas antigas.
+                    </p>
+                    <button onclick="forceCloudSync()" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs flex-shrink-0" title="Sincronizar dados com a nuvem">
+                        <i class="fa-solid fa-rotate text-emerald-600"></i> Sincronizar Nuvem
+                    </button>
+                </div>
+
+                <!-- Lista de Despensas -->
+                <div id="manage-pantries-list" class="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Inserido dinamicamente via JS -->
+                </div>
+
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <button onclick="openCreatePantryModal(); closeManagePantriesModal();" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-plus-circle"></i> + Criar Nova Despensa
+                    </button>
+                    <button type="button" onclick="closeManagePantriesModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -816,7 +863,7 @@
     <script type="module">
         import { initializeApp as initFirebase } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, query, where, onSnapshot, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Firebase Configuration (controle-de-despensa-2)
         const firebaseConfig = {
@@ -1251,17 +1298,24 @@
                 listEl.innerHTML = '';
                 userPantries.forEach(p => {
                     const isSelected = p.id === currentPantryId;
-                    const itemBtn = document.createElement('button');
-                    itemBtn.className = `w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition cursor-pointer ${isSelected ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200' : 'text-slate-700 hover:bg-slate-50 font-medium'}`;
-                    itemBtn.innerHTML = `
-                        <div class="flex items-center gap-2 truncate mr-2">
-                            <i class="fa-solid fa-house-chimney ${isSelected ? 'text-emerald-600' : 'text-slate-400'} text-xs"></i>
-                            <span class="truncate">${p.name}</span>
-                        </div>
-                        <span class="font-mono text-[10px] ${isSelected ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-100 text-slate-500'} px-1.5 py-0.5 rounded flex-shrink-0 font-bold">${p.shareCode || 'DSP'}</span>
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = `flex items-center justify-between p-1 rounded-xl transition ${isSelected ? 'bg-emerald-50 border border-emerald-200' : 'hover:bg-slate-50'}`;
+                    
+                    rowDiv.innerHTML = `
+                        <button onclick="switchPantry('${p.id}')" class="flex-1 text-left px-2 py-1 text-xs flex items-center justify-between transition cursor-pointer truncate">
+                            <div class="flex items-center gap-2 truncate mr-1.5">
+                                <i class="fa-solid fa-house-chimney ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'} text-xs flex-shrink-0"></i>
+                                <span class="truncate ${isSelected ? 'text-emerald-900 font-bold' : 'text-slate-700 font-medium'}">${p.name}</span>
+                            </div>
+                            <span class="font-mono text-[10px] ${isSelected ? 'bg-emerald-200 text-emerald-900' : 'bg-slate-100 text-slate-500'} px-1.5 py-0.5 rounded flex-shrink-0 font-bold">${p.shareCode || 'DSP'}</span>
+                        </button>
+                        ${userPantries.length > 1 ? `
+                        <button onclick="event.stopPropagation(); deletePantry('${p.id}', '${p.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-300 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer flex-shrink-0" title="Excluir esta lista">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                        ` : ''}
                     `;
-                    itemBtn.onclick = () => switchPantry(p.id);
-                    listEl.appendChild(itemBtn);
+                    listEl.appendChild(rowDiv);
                 });
             }
         }
@@ -1296,6 +1350,191 @@
 
             const activePantry = userPantries.find(p => p.id === pantryId);
             showToast(`Despensa ativa: ${activePantry ? activePantry.name : 'Despensa'}`, 'info');
+        }
+
+        // =========================================================================
+        // EXCLUSÃO E GERENCIAMENTO AVANÇADO DE DESPENSAS
+        // =========================================================================
+        async function deletePantry(pantryId, pantryName) {
+            if (!pantryId) return;
+            if (userPantries.length <= 1) {
+                showToast("Você não pode excluir sua única despensa.", "error");
+                return;
+            }
+
+            const confirmed = confirm(`Tem certeza que deseja excluir a lista "${pantryName}" e todos os seus itens?\n\nEsta ação removerá a lista da nuvem e de todos os seus dispositivos.`);
+            if (!confirmed) return;
+
+            try {
+                // 1. Remover do Firestore (se online)
+                if (currentUser && db) {
+                    try {
+                        // Deletar da subcoleção users/{uid}/pantries
+                        await deleteDoc(doc(db, 'users', currentUser.uid, 'pantries', pantryId)).catch(() => {});
+                        
+                        // Se for dono, deletar documento raiz e seus itens
+                        const pantryDoc = await getDoc(doc(db, 'pantries', pantryId)).catch(() => null);
+                        if (pantryDoc && pantryDoc.exists()) {
+                            const pData = pantryDoc.data();
+                            if (!pData.ownerUid || pData.ownerUid === currentUser.uid) {
+                                const itemsSnap = await getDocs(collection(db, 'pantries', pantryId, 'items')).catch(() => null);
+                                if (itemsSnap) {
+                                    for (const it of itemsSnap.docs) {
+                                        await deleteDoc(doc(db, 'pantries', pantryId, 'items', it.id)).catch(() => {});
+                                    }
+                                }
+                                await deleteDoc(doc(db, 'pantries', pantryId)).catch(() => {});
+                            } else {
+                                // Se for apenas membro participante, remove o UID do array members
+                                await updateDoc(doc(db, 'pantries', pantryId), {
+                                    members: arrayRemove(currentUser.uid),
+                                    updatedAt: new Date().toISOString()
+                                }).catch(() => {});
+                            }
+                        }
+                    } catch (firestoreErr) {
+                        console.warn("Erro ao remover no Firestore:", firestoreErr);
+                    }
+                }
+
+                // 2. Limpar do armazenamento local
+                localStorage.removeItem(STORAGE_KEYS.ITEMS_PREFIX + pantryId);
+                localStorage.removeItem(`pantry_cache_${pantryId}`);
+
+                userPantries = userPantries.filter(p => p.id !== pantryId);
+                savePantriesToStorage(userPantries);
+
+                // 3. Se a despensa excluída era a ativa, alternar imediatamente para outra
+                if (currentPantryId === pantryId) {
+                    const nextPantry = userPantries[0];
+                    await switchPantry(nextPantry.id);
+                }
+                
+                renderPantrySelector();
+                renderManagePantriesModalList();
+
+                showToast(`Lista "${pantryName}" excluída com sucesso!`, 'success');
+            } catch (err) {
+                console.error("Erro ao excluir despensa:", err);
+                showToast("Erro ao excluir lista: " + err.message, "error");
+            }
+        }
+
+        async function forceCloudSync() {
+            showToast("Sincronizando com a nuvem...", "info");
+            
+            if (!currentUser || !db) {
+                loadLocalFallback();
+                showToast("Modo local sincronizado. Faça login com o Google para sincronizar com o celular.", "info");
+                return;
+            }
+
+            try {
+                // 1. Recarregar lista fresca de despensas e perfil remoto
+                await loadUserPantries();
+                
+                // 2. Buscar itens atualizados do Firestore para a despensa ativa
+                if (currentPantryId) {
+                    const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
+                    const snap = await getDocs(itemsCol);
+                    pantryItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    savePantryItemsToStorage(currentPantryId, pantryItems);
+                    setupRealtimeListener();
+                }
+                
+                populateCategorySelects();
+                renderAll();
+                renderPantrySelector();
+                renderManagePantriesModalList();
+
+                showToast("✓ Sincronização concluída! Dados atualizados da nuvem.", "success");
+            } catch (err) {
+                console.error("Erro na sincronização forçada:", err);
+                showToast("Erro na sincronização: " + err.message, "error");
+            }
+        }
+
+        function openManagePantriesModal() {
+            const menu = document.getElementById('pantry-dropdown-menu');
+            if (menu) menu.classList.add('hidden');
+            renderManagePantriesModalList();
+            document.getElementById('manage-pantries-modal').classList.remove('hidden');
+        }
+
+        function closeManagePantriesModal() {
+            document.getElementById('manage-pantries-modal').classList.add('hidden');
+        }
+
+        function renderManagePantriesModalList() {
+            const container = document.getElementById('manage-pantries-list');
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            userPantries.forEach(p => {
+                const isSelected = p.id === currentPantryId;
+                const itemsCount = isSelected ? pantryItems.length : (loadPantryItemsFromStorage(p.id).length || 0);
+
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isSelected ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-400' : 'bg-slate-50 border-slate-200'}`;
+
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm text-slate-800">${p.name}</span>
+                            <span class="font-mono text-xs bg-white text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-bold">${p.shareCode || 'DSP'}</span>
+                            ${isSelected ? '<span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Ativa</span>' : ''}
+                        </div>
+                        <p class="text-xs text-slate-500">
+                            ${itemsCount} ${itemsCount === 1 ? 'item cadastrado' : 'itens cadastrados'} • ${p.role === 'member' ? 'Membro' : 'Proprietário'}
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+                        ${!isSelected ? `
+                        <button onclick="switchPantry('${p.id}'); closeManagePantriesModal();" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-2xs">
+                            Ativar Lista
+                        </button>
+                        ` : ''}
+                        
+                        <button onclick="renamePantry('${p.id}', '${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition cursor-pointer" title="Renomear Despensa">
+                            <i class="fa-solid fa-pen text-xs"></i> Renomear
+                        </button>
+
+                        ${userPantries.length > 1 ? `
+                        <button onclick="deletePantry('${p.id}', '${p.name.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-lg text-xs font-semibold transition cursor-pointer" title="Excluir Lista">
+                            <i class="fa-solid fa-trash-can text-xs"></i> Excluir
+                        </button>
+                        ` : ''}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function renamePantry(pantryId, oldName) {
+            const newName = prompt(`Digite o novo nome para a despensa "${oldName}":`, oldName);
+            if (!newName || !newName.trim() || newName.trim() === oldName) return;
+
+            const name = newName.trim();
+            const pantry = userPantries.find(p => p.id === pantryId);
+            if (!pantry) return;
+
+            pantry.name = name;
+            savePantriesToStorage(userPantries);
+
+            if (currentUser && db) {
+                try {
+                    await setDoc(doc(db, 'pantries', pantryId), { name: name, updatedAt: new Date().toISOString() }, { merge: true });
+                    await setDoc(doc(db, 'users', currentUser.uid, 'pantries', pantryId), { name: name }, { merge: true });
+                } catch (e) {
+                    console.warn("Erro ao renomear despensa no Firestore:", e);
+                }
+            }
+
+            renderPantrySelector();
+            renderManagePantriesModalList();
+            showToast(`Despensa renomeada para "${name}"!`, 'success');
         }
 
         function openCreatePantryModal() {
@@ -3187,6 +3426,12 @@ Retorne APENAS um JSON puro no formato:
         // Despensas e Histórico de Preços
         window.togglePantryDropdown = togglePantryDropdown;
         window.switchPantry = switchPantry;
+        window.deletePantry = deletePantry;
+        window.forceCloudSync = forceCloudSync;
+        window.openManagePantriesModal = openManagePantriesModal;
+        window.closeManagePantriesModal = closeManagePantriesModal;
+        window.renderManagePantriesModalList = renderManagePantriesModalList;
+        window.renamePantry = renamePantry;
         window.openCreatePantryModal = openCreatePantryModal;
         window.closeCreatePantryModal = closeCreatePantryModal;
         window.handleCreatePantry = handleCreatePantry;
