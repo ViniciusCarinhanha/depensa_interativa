@@ -1273,6 +1273,16 @@
             localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, pantryId);
             localStorage.setItem('active_pantry_id', pantryId);
             
+            // Sincronizar despensa ativa no Firestore para sincronização instantânea entre PC e Celular
+            if (currentUser && db) {
+                try {
+                    setDoc(doc(db, 'users', currentUser.uid), {
+                        activePantryId: pantryId,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true }).catch(() => {});
+                } catch (e) {}
+            }
+
             const menu = document.getElementById('pantry-dropdown-menu');
             if (menu) menu.classList.add('hidden');
 
@@ -1334,6 +1344,10 @@
                         role: 'owner',
                         joinedAt: new Date().toISOString()
                     });
+                    await setDoc(doc(db, 'users', currentUser.uid), {
+                        activePantryId: newPantryId,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true });
                 } catch (err) {
                     console.error("Erro ao criar despensa no Firestore:", err);
                 }
@@ -1489,12 +1503,68 @@
         async function loadUserPantries() {
             if (currentUser && db) {
                 try {
-                    // Buscar despensas onde o usuário é membro
-                    const q = query(collection(db, 'pantries'), where('members', 'array-contains', currentUser.uid));
-                    const snapshot = await getDocs(q);
+                    const foundPantriesMap = new Map();
 
-                    if (!snapshot.empty) {
-                        userPantries = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // 1. Buscar na subcoleção do usuário users/{uid}/pantries
+                    try {
+                        const userPantriesCol = collection(db, 'users', currentUser.uid, 'pantries');
+                        const userPantriesSnap = await getDocs(userPantriesCol);
+                        userPantriesSnap.forEach(d => {
+                            const data = d.data();
+                            const pid = data.pantryId || d.id;
+                            foundPantriesMap.set(pid, { id: pid, ...data });
+                        });
+                    } catch (e) {
+                        console.warn("Erro ao buscar users/pantries:", e);
+                    }
+
+                    // 2. Buscar despensas onde o usuário é membro na coleção global pantries
+                    try {
+                        const q = query(collection(db, 'pantries'), where('members', 'array-contains', currentUser.uid));
+                        const snapshot = await getDocs(q);
+                        snapshot.forEach(d => {
+                            const data = d.data();
+                            foundPantriesMap.set(d.id, { id: d.id, ...data });
+                        });
+                    } catch (e) {
+                        console.warn("Erro ao buscar pantries por members:", e);
+                    }
+
+                    // 3. Buscar despensa direta por ID padrão pantry_{uid}
+                    try {
+                        const defaultId = 'pantry_' + currentUser.uid.substring(0, 8);
+                        if (!foundPantriesMap.has(defaultId)) {
+                            const defSnap = await getDoc(doc(db, 'pantries', defaultId));
+                            if (defSnap.exists()) {
+                                foundPantriesMap.set(defaultId, { id: defaultId, ...defSnap.data() });
+                            }
+                        }
+                    } catch(e) {}
+
+                    // Buscar perfil do usuário para sincronizar despensa ativa entre dispositivos
+                    let remoteActivePantryId = null;
+                    try {
+                        const userProfileDoc = await getDoc(doc(db, 'users', currentUser.uid));
+                        if (userProfileDoc.exists() && userProfileDoc.data()?.activePantryId) {
+                            remoteActivePantryId = userProfileDoc.data().activePantryId;
+                        }
+                    } catch(e) {}
+
+                    if (foundPantriesMap.size > 0) {
+                        const fullPantries = [];
+                        for (const [pid, pData] of foundPantriesMap.entries()) {
+                            try {
+                                const pDoc = await getDoc(doc(db, 'pantries', pid));
+                                if (pDoc.exists()) {
+                                    fullPantries.push({ id: pid, ...pDoc.data() });
+                                } else {
+                                    fullPantries.push(pData);
+                                }
+                            } catch(e) {
+                                fullPantries.push(pData);
+                            }
+                        }
+                        userPantries = fullPantries;
                     } else {
                         // Sincronizar despensas locais existentes para o novo usuário logado
                         const localPantries = loadPantriesFromStorage();
@@ -1515,14 +1585,14 @@
                                 updatedAt: new Date().toISOString()
                             };
 
-                            await setDoc(doc(db, 'pantries', pantryId), newPantry);
+                            await setDoc(doc(db, 'pantries', pantryId), newPantry, { merge: true });
                             await setDoc(doc(db, 'users', currentUser.uid, 'pantries', pantryId), {
                                 pantryId: pantryId,
                                 name: newPantry.name,
                                 shareCode: newPantry.shareCode,
                                 role: 'owner',
                                 joinedAt: new Date().toISOString()
-                            });
+                            }, { merge: true });
 
                             // Migrar itens da despensa para o Firestore
                             const localItems = loadPantryItemsFromStorage(lp.id);
@@ -1534,33 +1604,50 @@
                             userPantries.push(newPantry);
                         }
                     }
+
+                    // Garantir que todas as despensas tenham shareCode exclusivo
+                    userPantries.forEach(p => {
+                        if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
+                            p.shareCode = generateShareCode();
+                            if (p.id && !p.id.startsWith('default_local') && !p.id.startsWith('pantry_principal')) {
+                                updateDoc(doc(db, 'pantries', p.id), { shareCode: p.shareCode }).catch(() => {});
+                            }
+                        }
+                    });
+
+                    // Restaurar despensa ativa sincronizada com nuvem
+                    const savedLocalId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PANTRY) || localStorage.getItem('active_pantry_id');
+                    if (remoteActivePantryId && userPantries.some(p => p.id === remoteActivePantryId)) {
+                        currentPantryId = remoteActivePantryId;
+                    } else if (savedLocalId && userPantries.some(p => p.id === savedLocalId)) {
+                        currentPantryId = savedLocalId;
+                    } else if (userPantries.length > 0) {
+                        currentPantryId = userPantries[0].id;
+                    }
+
+                    // Salvar despensa ativa no perfil
+                    setDoc(doc(db, 'users', currentUser.uid), {
+                        activePantryId: currentPantryId,
+                        displayName: currentUser.displayName || '',
+                        email: currentUser.email || '',
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true }).catch(() => {});
+
                 } catch (err) {
                     console.error("Erro ao carregar despensas do Firestore:", err);
                     userPantries = loadPantriesFromStorage();
                 }
             } else {
                 userPantries = loadPantriesFromStorage();
-            }
-
-            // Garantir que todas as despensas tenham shareCode exclusivo
-            userPantries.forEach(p => {
-                if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
-                    p.shareCode = generateShareCode();
-                    if (currentUser && db && p.id && !p.id.startsWith('default_local') && !p.id.startsWith('pantry_principal')) {
-                        updateDoc(doc(db, 'pantries', p.id), { shareCode: p.shareCode }).catch(() => {});
-                    }
+                const savedPantryId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PANTRY) || localStorage.getItem('active_pantry_id');
+                if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
+                    currentPantryId = savedPantryId;
+                } else if (userPantries.length > 0) {
+                    currentPantryId = userPantries[0].id;
                 }
-            });
+            }
 
             savePantriesToStorage(userPantries);
-
-            // Restaurar despensa ativa de forma segura
-            const savedPantryId = localStorage.getItem(STORAGE_KEYS.ACTIVE_PANTRY) || localStorage.getItem('active_pantry_id');
-            if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
-                currentPantryId = savedPantryId;
-            } else if (userPantries.length > 0) {
-                currentPantryId = userPantries[0].id;
-            }
             localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, currentPantryId);
             localStorage.setItem('active_pantry_id', currentPantryId);
 
