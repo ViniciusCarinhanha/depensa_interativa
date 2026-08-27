@@ -1,0 +1,24 @@
+{
+  "name": "app-despensa",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ViniciusCarinhanha/depensa_interativa.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ViniciusCarinhanha/depensa_interativa/issues"
+  },
+  "homepage": "https://github.com/ViniciusCarinhanha/depensa_interativa#readme",
+  "devDependencies": {
+    "firebase-tools": "^15.28.1"
+  }
+}
