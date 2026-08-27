@@ -549,8 +549,27 @@
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Categoria *</label>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-semibold text-slate-600 uppercase">Categoria *</label>
+                            <button type="button" onclick="openNewCategoryPrompt()" class="text-[11px] text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 cursor-pointer" title="Adicionar nova categoria">
+                                <i class="fa-solid fa-plus-circle"></i> Nova
+                            </button>
+                        </div>
                         <select id="form-category" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"></select>
+                        
+                        <!-- Box Inline para Nova Categoria -->
+                        <div id="new-category-inline-box" class="hidden mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-xl space-y-1.5 animate-fade-in">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold text-emerald-800 uppercase">Nova Categoria</span>
+                                <button type="button" onclick="closeNewCategoryPrompt()" class="text-slate-400 hover:text-slate-600 text-xs cursor-pointer p-0.5">✕</button>
+                            </div>
+                            <div class="flex gap-1.5">
+                                <input type="text" id="new-category-input" placeholder="Ex: Congelados, Pet Shop..." class="w-full px-2.5 py-1 border border-emerald-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <button type="button" onclick="addNewCategoryFromForm()" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex-shrink-0 cursor-pointer">
+                                    Criar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Localização</label>
@@ -836,13 +855,92 @@
             'gemini-flash-latest'
         ];
 
-        // Categories and Locations
-        const CATEGORIES = [
+        // Categories (Dinâmicas e Personalizáveis)
+        const DEFAULT_CATEGORIES = [
             'Grãos e Cereais', 'Laticínios e Frios', 'Carnes e Aves', 
             'Conservas e Enlatados', 'Bebidas', 'Molhos e Condimentos', 
             'Hortifrúti', 'Padaria e Matinais', 'Produtos de Limpeza', 
             'Higiene Pessoal', 'Outros'
         ];
+
+        let customCategories = [];
+
+        function getAvailableCategories() {
+            const stored = localStorage.getItem('user_custom_categories');
+            let localCustom = [];
+            if (stored) {
+                try { localCustom = JSON.parse(stored); } catch(e) {}
+            }
+            const itemCategories = pantryItems.map(i => i.category).filter(Boolean);
+            const combined = Array.from(new Set([...DEFAULT_CATEGORIES, ...localCustom, ...customCategories, ...itemCategories]));
+            return combined;
+        }
+
+        function populateCategorySelects(selectedCategory = null) {
+            const categories = getAvailableCategories();
+            const filterSel = document.getElementById('filter-category');
+            const formSel = document.getElementById('form-category');
+
+            if (filterSel) {
+                const curVal = filterSel.value;
+                filterSel.innerHTML = '<option value="">Todas as Categorias</option>';
+                categories.forEach(c => filterSel.innerHTML += `<option value="${c}">${c}</option>`);
+                if (curVal && categories.includes(curVal)) filterSel.value = curVal;
+            }
+
+            if (formSel) {
+                const curVal = selectedCategory || formSel.value;
+                formSel.innerHTML = '';
+                categories.forEach(c => formSel.innerHTML += `<option value="${c}">${c}</option>`);
+                if (curVal && categories.includes(curVal)) formSel.value = curVal;
+            }
+        }
+
+        function openNewCategoryPrompt() {
+            const box = document.getElementById('new-category-inline-box');
+            const input = document.getElementById('new-category-input');
+            if (box) {
+                box.classList.remove('hidden');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            }
+        }
+
+        function closeNewCategoryPrompt() {
+            const box = document.getElementById('new-category-inline-box');
+            if (box) box.classList.add('hidden');
+        }
+
+        function addNewCategoryFromForm() {
+            const input = document.getElementById('new-category-input');
+            const raw = input ? input.value.trim() : '';
+            if (!raw) {
+                showToast("Digite o nome da nova categoria.", "error");
+                return;
+            }
+
+            // Normaliza capitalização
+            const catName = raw.charAt(0).toUpperCase() + raw.slice(1);
+            
+            const stored = localStorage.getItem('user_custom_categories');
+            let localCustom = [];
+            if (stored) {
+                try { localCustom = JSON.parse(stored); } catch(e) {}
+            }
+            if (!localCustom.includes(catName)) {
+                localCustom.push(catName);
+                localStorage.setItem('user_custom_categories', JSON.stringify(localCustom));
+            }
+            if (!customCategories.includes(catName)) {
+                customCategories.push(catName);
+            }
+
+            populateCategorySelects(catName);
+            closeNewCategoryPrompt();
+            showToast(`Categoria "${catName}" adicionada com sucesso!`, "success");
+        }
 
         const LOCATIONS = ['Armário Principal', 'Geladeira', 'Freezer', 'Despensa de Limpeza', 'Fruteira', 'Outro'];
 
@@ -967,9 +1065,7 @@
         let currentUser = null;
         let pantryItems = [];
         let currentPantryId = 'default_local';
-        let userPantries = [
-            { id: 'default_local', name: 'Despensa Principal', shareCode: 'DSP-PRINC', role: 'owner' }
-        ];
+        let userPantries = [];
         let currentPriceHistoryItemId = null;
         let unsubscribeSnapshot = null;
         let sortField = 'name';
@@ -982,11 +1078,11 @@
         let scannedMimeType = 'image/jpeg';
         let detectedScannedItems = [];
 
-        // Helper para Gerar Código Único de Compartilhamento
+        // Helper para Gerar Código Único e Aleatório de Compartilhamento (6 caracteres alfanuméricos)
         function generateShareCode() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
             let code = 'DSP-';
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 6; i++) {
                 code += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             return code;
@@ -1065,14 +1161,14 @@
         });
 
         function renderPantrySelector() {
-            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-PRINC' };
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-...' };
             const nameEl = document.getElementById('current-pantry-name');
             const badgeEl = document.getElementById('current-pantry-badge');
             const countEl = document.getElementById('pantry-count-badge');
             const listEl = document.getElementById('pantry-list-items');
 
             if (nameEl) nameEl.innerText = currentPantry.name;
-            if (badgeEl) badgeEl.innerText = currentPantry.shareCode || 'DSP-PRINC';
+            if (badgeEl) badgeEl.innerText = currentPantry.shareCode || 'DSP-...';
             if (countEl) countEl.innerText = `${userPantries.length} ${userPantries.length === 1 ? 'lista' : 'listas'}`;
 
             if (listEl) {
@@ -1139,7 +1235,7 @@
             }
 
             const newCode = generateShareCode();
-            const newPantryId = 'pantry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+            const newPantryId = 'pantry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
             const pantryObj = {
                 id: newPantryId,
@@ -1271,12 +1367,12 @@
         }
 
         function openSharePantryModal() {
-            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-PRINC' };
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-...' };
             const nameEl = document.getElementById('share-modal-pantry-name');
             const codeEl = document.getElementById('share-modal-code-display');
 
             if (nameEl) nameEl.innerText = currentPantry.name;
-            if (codeEl) codeEl.innerText = currentPantry.shareCode || 'DSP-PRINC';
+            if (codeEl) codeEl.innerText = currentPantry.shareCode || 'DSP-...';
 
             document.getElementById('share-pantry-modal').classList.remove('hidden');
         }
@@ -1286,8 +1382,8 @@
         }
 
         function copyPantryShareCode() {
-            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { shareCode: 'DSP-PRINC' };
-            const code = currentPantry.shareCode || 'DSP-PRINC';
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { shareCode: 'DSP-...' };
+            const code = currentPantry.shareCode;
             
             navigator.clipboard.writeText(code).then(() => {
                 showToast(`Código ${code} copiado para a área de transferência!`, 'success');
@@ -1303,9 +1399,9 @@
         }
 
         function sharePantryViaWhatsApp() {
-            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-PRINC' };
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0] || { name: 'Despensa Principal', shareCode: 'DSP-...' };
             const name = currentPantry.name;
-            const code = currentPantry.shareCode || 'DSP-PRINC';
+            const code = currentPantry.shareCode;
             const msg = encodeURIComponent(`Olá! Convido você a participar da minha lista na *Despensa Inteligente* (*${name}*).\n\nUse o código de acesso: *${code}* para sincronizar e gerenciar nossos itens em tempo real! 🛒`);
             window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
         }
@@ -1337,6 +1433,16 @@
                         userPantries = [defaultPantry];
                     }
 
+                    // Migração automática de códigos genéricos para códigos únicos
+                    userPantries.forEach(p => {
+                        if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
+                            p.shareCode = generateShareCode();
+                            if (p.id) {
+                                updateDoc(doc(db, 'pantries', p.id), { shareCode: p.shareCode, updatedAt: new Date().toISOString() }).catch(() => {});
+                            }
+                        }
+                    });
+
                     // Restaurar despensa ativa salva
                     const savedPantryId = localStorage.getItem('active_pantry_id');
                     if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
@@ -1353,11 +1459,22 @@
                     try {
                         userPantries = JSON.parse(local);
                     } catch(e) {
-                        userPantries = [{ id: 'default_local', name: 'Despensa Principal', shareCode: 'DSP-PRINC', role: 'owner' }];
+                        userPantries = [];
                     }
-                } else {
-                    userPantries = [{ id: 'default_local', name: 'Despensa Principal', shareCode: 'DSP-PRINC', role: 'owner' }];
                 }
+                
+                if (!userPantries || userPantries.length === 0) {
+                    userPantries = [{ id: 'default_local', name: 'Despensa Principal', shareCode: generateShareCode(), role: 'owner' }];
+                }
+
+                // Migração de códigos genéricos em modo local
+                userPantries.forEach(p => {
+                    if (!p.shareCode || p.shareCode === 'DSP-PRINC' || p.shareCode.startsWith('DSP-LOCAL') || p.shareCode === 'DSP-XXXX' || p.shareCode.length < 8) {
+                        p.shareCode = generateShareCode();
+                    }
+                });
+
+                localStorage.setItem('local_user_pantries', JSON.stringify(userPantries));
 
                 const savedPantryId = localStorage.getItem('active_pantry_id');
                 if (savedPantryId && userPantries.some(p => p.id === savedPantryId)) {
@@ -1753,6 +1870,7 @@
             unsubscribeSnapshot = onSnapshot(itemsCol, (snapshot) => {
                 pantryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 localStorage.setItem(`pantry_cache_${currentPantryId}`, JSON.stringify(pantryItems));
+                populateCategorySelects();
                 renderAll();
             }, (err) => {
                 console.error("Erro no listener do Firestore:", err);
@@ -1772,6 +1890,7 @@
             } else {
                 pantryItems = INITIAL_SAMPLE_DATA;
             }
+            populateCategorySelects();
             renderAll();
         }
 
@@ -1866,6 +1985,16 @@
             }
             itemData.priceHistory = history;
 
+            // Garantir que nova categoria do item seja registrada no sistema
+            if (itemData.category) {
+                const cats = getAvailableCategories();
+                if (!cats.includes(itemData.category)) {
+                    customCategories.push(itemData.category);
+                    localStorage.setItem('user_custom_categories', JSON.stringify(customCategories));
+                    populateCategorySelects(itemData.category);
+                }
+            }
+
             if (currentUser && db && currentPantryId) {
                 const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
                 const docRef = itemData.id && !itemData.id.startsWith('local_') && !itemData.id.startsWith('sample-') ? doc(itemsCol, itemData.id) : doc(itemsCol);
@@ -1890,14 +2019,24 @@
         }
 
         async function removePantryItem(id) {
+            if (!id) return;
+
+            const item = pantryItems.find(i => i.id === id);
+            const itemName = item ? item.name : 'Item';
+
+            // Atualização imediata em memória e no cache local
+            pantryItems = pantryItems.filter(i => i.id !== id);
+            localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
+            renderAll();
+
             if (currentUser && db && currentPantryId) {
-                await deleteDoc(doc(db, 'pantries', currentPantryId, 'items', id));
-            } else {
-                pantryItems = pantryItems.filter(i => i.id !== id);
-                localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
-                renderAll();
+                try {
+                    await deleteDoc(doc(db, 'pantries', currentPantryId, 'items', id));
+                } catch (err) {
+                    console.error("Erro ao deletar documento no Firestore:", err);
+                }
             }
-            showToast("Item excluído.", "info");
+            showToast(`"${itemName}" excluído com sucesso.`, "info");
         }
 
         async function updateItemQuantity(id, delta) {
@@ -1905,15 +2044,19 @@
             if (!item) return;
 
             const newQty = Math.max(0, (parseInt(item.quantity) || 0) + delta);
+            item.quantity = newQty;
+            localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
+            renderAll();
+
             if (currentUser && db && currentPantryId) {
-                await updateDoc(doc(db, 'pantries', currentPantryId, 'items', id), {
-                    quantity: newQty,
-                    updatedAt: new Date().toISOString()
-                });
-            } else {
-                item.quantity = newQty;
-                localStorage.setItem(`pantry_cache_${currentPantryId || 'default'}`, JSON.stringify(pantryItems));
-                renderAll();
+                try {
+                    await updateDoc(doc(db, 'pantries', currentPantryId, 'items', id), {
+                        quantity: newQty,
+                        updatedAt: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error("Erro ao atualizar quantidade no Firestore:", err);
+                }
             }
         }
 
@@ -2082,7 +2225,7 @@
                             <button onclick="openModal('${item.id}')" title="Editar item" class="p-1.5 text-slate-400 hover:text-slate-700 transition cursor-pointer">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
-                            <button onclick="deleteItem('${item.id}')" title="Excluir item" class="p-1.5 text-slate-400 hover:text-rose-600 transition cursor-pointer">
+                            <button onclick="removePantryItem('${item.id}')" title="Excluir item" class="p-1.5 text-slate-400 hover:text-rose-600 transition cursor-pointer">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -2170,16 +2313,19 @@
             const modal = document.getElementById('item-modal');
             const title = document.getElementById('item-modal-title');
             const form = document.getElementById('item-form');
+            closeNewCategoryPrompt();
             form.reset();
+
+            let selectedCat = null;
 
             if (id) {
                 title.innerText = 'Editar Item';
                 const item = pantryItems.find(i => i.id === id);
                 if (item) {
+                    selectedCat = item.category;
                     document.getElementById('form-item-id').value = item.id;
                     document.getElementById('form-name').value = item.name;
-                    document.getElementById('form-category').value = item.category;
-                    document.getElementById('form-location').value = item.location;
+                    document.getElementById('form-location').value = item.location || 'Armário Principal';
                     document.getElementById('form-quantity').value = item.quantity;
                     document.getElementById('form-unit').value = item.unit || 'un';
                     document.getElementById('form-min-quantity').value = item.minQuantity || 1;
@@ -2192,11 +2338,13 @@
                 document.getElementById('form-expiry').value = getRelativeDate(30);
             }
 
+            populateCategorySelects(selectedCat);
             modal.classList.remove('hidden');
         }
 
         function closeModal() {
             document.getElementById('item-modal').classList.add('hidden');
+            closeNewCategoryPrompt();
         }
 
         async function handleSaveItem(e) {
@@ -2430,6 +2578,7 @@
             results.classList.add('hidden');
             processing.classList.remove('hidden');
 
+            const currentCats = getAvailableCategories().join(', ');
             const prompt = `Identifique todos os produtos de supermercado ou itens de cupom fiscal presentes nesta imagem.
 Retorne APENAS um array JSON puro (sem explicações, sem markdown) com esta estrutura:
 [
@@ -2441,7 +2590,7 @@ Retorne APENAS um array JSON puro (sem explicações, sem markdown) com esta est
     "price": 10.50
   }
 ]
-Categorias válidas: Grãos e Cereais, Laticínios e Frios, Carnes e Aves, Conservas e Enlatados, Bebidas, Molhos e Condimentos, Hortifrúti, Padaria e Matinais, Produtos de Limpeza, Higiene Pessoal, Outros.`;
+Sugestão de Categorias: ${currentCats}`;
 
             try {
                 const text = await callGeminiApi(prompt, scannedBase64Image, scannedMimeType);
@@ -2625,6 +2774,14 @@ Retorne APENAS um JSON puro no formato:
             });
         }
 
+        // Helper para Cores de Categorias no Gráfico
+        function getCategoryColor(index) {
+            const palette = ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#64748b', '#a855f7', '#06b6d4', '#e11d48', '#84cc16'];
+            if (index < palette.length) return palette[index];
+            const hue = (index * 137.5) % 360;
+            return `hsl(${hue}, 70%, 50%)`;
+        }
+
         // Analytics Charts
         function renderCharts() {
             const catCtx = document.getElementById('chart-category')?.getContext('2d');
@@ -2636,14 +2793,17 @@ Retorne APENAS um JSON puro no formato:
                 catCounts[i.category] = (catCounts[i.category] || 0) + (parseInt(i.quantity) || 1);
             });
 
+            const catKeys = Object.keys(catCounts);
+            const catColors = catKeys.map((_, idx) => getCategoryColor(idx));
+
             if (chartCategoryInstance) chartCategoryInstance.destroy();
             chartCategoryInstance = new Chart(catCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(catCounts),
+                    labels: catKeys,
                     datasets: [{
                         data: Object.values(catCounts),
-                        backgroundColor: ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#64748b', '#a855f7']
+                        backgroundColor: catColors
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
@@ -2745,6 +2905,7 @@ Retorne APENAS um JSON puro no formato:
         window.handleSaveItem = handleSaveItem;
         window.updateQty = updateItemQuantity;
         window.deleteItem = removePantryItem;
+        window.removePantryItem = removePantryItem;
         window.openScanModal = openScanModal;
         window.closeScanModal = closeScanModal;
         window.handleImageScan = handleImageScan;
@@ -2767,7 +2928,12 @@ Retorne APENAS um JSON puro no formato:
         window.toggleGeminiKeyVisibility = toggleGeminiKeyVisibility;
         window.callGeminiApi = callGeminiApi;
         
-        // Novas exportações: Despensas e Histórico de Preços
+        // Categorias Customizadas
+        window.openNewCategoryPrompt = openNewCategoryPrompt;
+        window.closeNewCategoryPrompt = closeNewCategoryPrompt;
+        window.addNewCategoryFromForm = addNewCategoryFromForm;
+        
+        // Despensas e Histórico de Preços
         window.togglePantryDropdown = togglePantryDropdown;
         window.switchPantry = switchPantry;
         window.openCreatePantryModal = openCreatePantryModal;
@@ -2788,12 +2954,7 @@ Retorne APENAS um JSON puro no formato:
 
         // Initialization
         function initializeApp() {
-            const catSelects = [document.getElementById('filter-category'), document.getElementById('form-category')];
-            catSelects.forEach(sel => {
-                if (sel && sel.options.length <= 1) {
-                    CATEGORIES.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
-                }
-            });
+            populateCategorySelects();
 
             const locSelects = [document.getElementById('filter-location'), document.getElementById('form-location')];
             locSelects.forEach(sel => {
