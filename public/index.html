@@ -120,6 +120,10 @@
                         <i class="fa-solid fa-camera"></i> <span>Escanear IA</span>
                     </button>
 
+                    <button onclick="openOptimizePantryModal()" id="btnOptimizeIA" class="bg-violet-600 hover:bg-violet-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap" title="Agrupar produtos e padronizar nomes com IA">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Otimizar IA</span>
+                    </button>
+
                     <button onclick="openModal()" id="btnNewItem" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap">
                         <i class="fa-solid fa-plus"></i> <span>Novo Item</span>
                     </button>
@@ -857,6 +861,90 @@
                         Fechar
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: OTIMIZAÇÃO INTELIGENTE DA DESPENSA COM IA -->
+    <div id="optimize-pantry-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="app-modal-box bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden animate-fade-in mx-auto max-h-[90vh] flex flex-col">
+            <div class="bg-gradient-to-r from-violet-900 via-indigo-900 to-slate-900 text-white px-6 py-4 flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-violet-600/50 flex items-center justify-center border border-violet-400/30">
+                        <i class="fa-solid fa-wand-magic-sparkles text-violet-200 text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base">Otimização Inteligente da Despensa</h3>
+                        <p class="text-[11px] text-violet-200">Padronização de nomes, agrupamento de marcas e sabores com IA</p>
+                    </div>
+                </div>
+                <button onclick="closeOptimizePantryModal()" class="text-violet-200 hover:text-white text-lg p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <!-- Explicação do Recurso -->
+                <div class="bg-violet-50/70 border border-violet-200 rounded-xl p-4 text-xs text-violet-950 space-y-2">
+                    <div class="font-bold flex items-center gap-1.5 text-violet-900 text-sm">
+                        <i class="fa-solid fa-lightbulb text-violet-600"></i> Como a IA otimiza sua lista:
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-slate-700">
+                        <li><strong>Traduz nomes fiscais abreviados:</strong> Converte termos crípticos de notas fiscais (ex: <em>BISC RECH PASSATEMPO 130G</em>) em nomes claros e didáticos (<em>Biscoito Passatempo</em>).</li>
+                        <li><strong>Agrupa variações e sabores:</strong> Consolida produtos de mesma marca e tipo (ex: <em>Ruffles Churrasco + Ruffles Cebola</em>) em uma única entrada, somando as quantidades.</li>
+                        <li><strong>Calcula preços realistas:</strong> Normaliza o custo unitário e patrimônio para nunca inflar o valor financeiro.</li>
+                    </ul>
+                </div>
+
+                <!-- Estado Inicial / Botão de Ação -->
+                <div id="optimize-initial-state" class="text-center py-4 space-y-3">
+                    <div class="text-xs text-slate-500">
+                        A otimização analisará todos os itens da despensa ativa (<span id="optimize-pantry-target-name" class="font-bold text-slate-700">Despensa</span>) e exibirá uma prévia antes de aplicar.
+                    </div>
+                    <button onclick="runOptimizePantryAI()" id="btnStartOptimizeAI" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 text-xs sm:text-sm mx-auto cursor-pointer">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Analisar e Otimizar com IA
+                    </button>
+                </div>
+
+                <!-- Estado de Carregamento -->
+                <div id="optimize-loading-state" class="hidden py-8 text-center space-y-3">
+                    <div class="inline-block animate-spin text-violet-600 text-3xl">
+                        <i class="fa-solid fa-circle-notch"></i>
+                    </div>
+                    <p id="optimize-progress-text" class="text-sm font-semibold text-slate-700">Analisando produtos e agrupando variações...</p>
+                    <p class="text-xs text-slate-400">Normalizando nomes e consolidando quantidades</p>
+                </div>
+
+                <!-- Prévia dos Resultados -->
+                <div id="optimize-results-container" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-500">Prévia da Lista Otimizada:</h4>
+                        <span id="optimize-count-comparison" class="text-xs font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-md">5 itens → 3 itens</span>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-2.5">Produto Otimizado</th>
+                                    <th class="p-2.5">Categoria</th>
+                                    <th class="p-2.5 text-center">Quantidade</th>
+                                    <th class="p-2.5 text-right">Preço Un.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="optimize-preview-tbody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2 flex-shrink-0">
+                <button type="button" onclick="closeOptimizePantryModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-100 transition cursor-pointer">
+                    Cancelar
+                </button>
+                <button type="button" onclick="applyOptimizedPantryItems()" id="btnApplyOptimizedItems" class="hidden px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> Confirmar e Aplicar Otimização
+                </button>
             </div>
         </div>
     </div>
@@ -2756,24 +2844,26 @@
             }
         }
 
-        // =========================================================================
-        // UI RENDERING LOGIC & CÁLCULOS FINANCEIROS REALISTAS
-        // =========================================================================
         function getItemTotalValue(item) {
-            const price = parseFloat(item.price) || 0;
-            const qty = parseFloat(item.quantity) || 0;
+            const price = parseFloat(String(item.price || 0).replace(',', '.')) || 0;
+            const qty = parseFloat(String(item.quantity || 0).replace(',', '.')) || 0;
             const unit = (item.unit || 'un').toLowerCase();
 
             if (price <= 0 || qty <= 0) return 0;
 
-            // Tratamento realista para unidades volumétricas e de peso (ml, g, mg):
-            // Quando um usuário cadastra 300 ml ou 500 g por R$ 3,69, o preço informado é o preço da embalagem/item
-            // e NÃO R$ 3,69 por cada 1 ml (o que geraria R$ 1.107,00 por um molho de tomate)!
+            // 1. Unidades de gramagem/volume pequenos (ml, g, mg):
+            // Ex: 300 ml de molho por R$ 3,69 -> o preço cadastrado é o da embalagem fechada
             if (unit === 'ml' || unit === 'g' || unit === 'mg') {
                 if (qty >= 10) {
-                    return price; // Preço do produto cadastrado
+                    return price;
                 }
             }
+
+            // 2. Embalagens pesadas onde a quantidade indica o peso total (ex: 5 kg de arroz por R$ 28,00)
+            if ((unit === 'kg' || unit === 'l') && qty >= 3 && price >= 15) {
+                return price;
+            }
+
             return price * qty;
         }
 
@@ -3342,15 +3432,22 @@
             processing.classList.remove('hidden');
 
             const currentCats = getAvailableCategories().join(', ');
-            const prompt = `Identifique todos os produtos de supermercado ou itens de cupom fiscal presentes nesta imagem.
+            const prompt = `Você é um assistente especialista em leitura e digitalização de cupons fiscais e inventário de despensa.
+Analise a imagem da nota fiscal/recibo/produtos e extraia os itens seguindo ESTRITAMENTE estas regras:
+1. NUNCA copie abreviações fiscais crípticas (Ex: 'BISC RECH PASSAT CHOC' -> 'Biscoito Recheado Passatempo', 'REFRI COCA PET 2L' -> 'Refrigerante Coca-Cola 2L', 'DESINF PINHO SOL 1L' -> 'Desinfetante Pinho Sol 1L').
+2. Nomes didáticos e claros: Formate cada produto com nome comercial legível em português.
+3. Agrupamento de itens idênticos ou sabores da mesma marca: Se houver mais de uma linha para o mesmo produto com sabores diferentes (Ex: 'Ruffles Cebola 130g' + 'Ruffles Churrasco 130g'), agrupe em um único item didático 'Batata Chips Ruffles' com a quantidade total somada (ex: 2 un).
+4. Preço unitário correto: Indique o preço unitário em reais (R$) de cada item/embalagem.
+5. Unidades padronizadas: Use 'un', 'pct', 'cx', 'kg', 'g', 'L', 'ml', 'lata', 'garrafa'.
+
 Retorne APENAS um array JSON puro (sem explicações, sem markdown) com esta estrutura:
 [
   {
-    "name": "Nome do Produto",
-    "category": "Grãos e Cereais",
-    "quantity": 1,
-    "unit": "un",
-    "price": 10.50
+    "name": "Nome Didático do Produto",
+    "category": "Snacks e Doces",
+    "quantity": 2,
+    "unit": "pct",
+    "price": 8.50
   }
 ]
 Sugestão de Categorias: ${currentCats}`;
@@ -3408,6 +3505,208 @@ Sugestão de Categorias: ${currentCats}`;
             }
             closeScanModal();
             showToast(`${detectedScannedItems.length} itens importados com sucesso!`, 'success');
+        }
+
+        // =========================================================================
+        // OTIMIZADOR INTELIGENTE DA DESPENSA COM IA
+        // =========================================================================
+        let optimizedPantryItemsPreview = [];
+
+        function openOptimizePantryModal() {
+            const currentPantry = userPantries.find(p => p.id === currentPantryId) || { name: 'Despensa Principal' };
+            const targetEl = document.getElementById('optimize-pantry-target-name');
+            if (targetEl) targetEl.innerText = currentPantry.name;
+
+            document.getElementById('optimize-initial-state').classList.remove('hidden');
+            document.getElementById('optimize-loading-state').classList.add('hidden');
+            document.getElementById('optimize-results-container').classList.add('hidden');
+            document.getElementById('btnApplyOptimizedItems').classList.add('hidden');
+            document.getElementById('optimize-pantry-modal').classList.remove('hidden');
+        }
+
+        function closeOptimizePantryModal() {
+            document.getElementById('optimize-pantry-modal').classList.add('hidden');
+            optimizedPantryItemsPreview = [];
+        }
+
+        async function runOptimizePantryAI() {
+            if (!pantryItems || pantryItems.length === 0) {
+                showToast("Sua despensa está vazia. Adicione itens antes de otimizar.", "error");
+                return;
+            }
+
+            const currentKey = (activeApiKey || localStorage.getItem('gemini_api_key') || '').trim();
+            if (!currentKey) {
+                openConfigIAModal();
+                showToast("Configure sua chave Gemini para otimizar a despensa com IA.", "info");
+                return;
+            }
+
+            document.getElementById('optimize-initial-state').classList.add('hidden');
+            document.getElementById('optimize-loading-state').classList.remove('hidden');
+            document.getElementById('optimize-results-container').classList.add('hidden');
+
+            const currentCats = getAvailableCategories().join(', ');
+            const currentListJson = JSON.stringify(pantryItems.map(it => ({
+                id: it.id,
+                name: it.name,
+                category: it.category,
+                quantity: it.quantity,
+                unit: it.unit,
+                price: it.price,
+                location: it.location,
+                expiry: it.expiry
+            })), null, 2);
+
+            const prompt = `Você é um especialista em organização de estoque doméstico e inteligência de despensa.
+Receba a lista atual de produtos cadastrados na despensa e realize uma OTIMIZAÇÃO COMPLETA seguindo rigorosamente estas diretrizes:
+
+1. NORMALIZAÇÃO DIDÁTICA DE NOMES:
+- Converta qualquer nome críptico, abreviado ou copiado de cupom fiscal em nomes legíveis e elegantes em português.
+Exemplos:
+- "BISC RECH PASSATEMPO CHOC 130G" -> "Biscoito Recheado Passatempo"
+- "DESINF PINHO SOL LAVANDA 1L" -> "Desinfetante Pinho Sol Lavanda 1L"
+- "MOLHO TOM ELEFANTE SACHE 300G" -> "Molho de Tomate Elefante"
+
+2. AGRUPAMENTO INTELIGENTE DE PRODUTOS SIMILARES / SABORES / MARCAS:
+- Agrupe variações de um mesmo produto ou sabores da mesma linha em um único item didático consolidado.
+Exemplo:
+- Se houver "Batata Ruffles Cebola e Salsa" (1 un, R$ 8,00) e "Batata Ruffles Churrasco" (1 un, R$ 8,00), CONSOLIDE em "Batata Chips Ruffles" com quantidade = 2, unit = "pct" (ou "un"), e price = 8.00.
+- Se houver "Molho de Tomate 300g" (2 un) de marcas equivalentes ou compras diferentes, junte em um único item somando as quantidades.
+
+3. PREÇOS UNITÁRIOS REALISTAS:
+- O campo "price" deve representar o preço unitário realista do produto/embalagem em reais (R$).
+
+4. PRESERVAÇÃO DE CAMPOS:
+- Mantenha ou infira a data de validade mais próxima ("expiry"), o local adequado ("location") e uma das categorias sugeridas.
+
+Categorias disponíveis: ${currentCats}
+
+Lista Atual de Itens:
+${currentListJson}
+
+Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além de json):
+[
+  {
+    "name": "Nome Otimizado e Didático",
+    "category": "Snacks e Doces",
+    "location": "Armário Principal",
+    "quantity": 2,
+    "unit": "pct",
+    "price": 8.00,
+    "minQuantity": 1,
+    "expiry": "2027-02-23"
+  }
+]`;
+
+            try {
+                const responseText = await callGeminiApi(prompt);
+                let clean = responseText.trim();
+                if (clean.startsWith('```json')) clean = clean.replace(/^```json/, '').replace(/```$/, '');
+                else if (clean.startsWith('```')) clean = clean.replace(/^```/, '').replace(/```$/, '');
+
+                const optimizedItems = JSON.parse(clean.trim());
+                if (!Array.isArray(optimizedItems) || optimizedItems.length === 0) {
+                    throw new Error("A IA não retornou itens válidos.");
+                }
+
+                optimizedPantryItemsPreview = optimizedItems.map(item => ({
+                    id: 'opt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+                    name: item.name || 'Produto',
+                    category: item.category || 'Outros',
+                    location: item.location || 'Armário Principal',
+                    quantity: parseInt(item.quantity) || 1,
+                    unit: item.unit || 'un',
+                    price: parseFloat(item.price) || 0,
+                    minQuantity: parseInt(item.minQuantity) || 1,
+                    expiry: item.expiry || getRelativeDate(60),
+                    updatedAt: new Date().toISOString()
+                }));
+
+                renderOptimizePreview();
+            } catch (err) {
+                console.error("[Otimizador IA] Erro:", err);
+                showToast(`Erro na otimização com IA: ${err.message || 'Tente novamente.'}`, 'error');
+                document.getElementById('optimize-initial-state').classList.remove('hidden');
+            } finally {
+                document.getElementById('optimize-loading-state').classList.add('hidden');
+            }
+        }
+
+        function renderOptimizePreview(items) {
+            if (items && Array.isArray(items)) {
+                optimizedPantryItemsPreview = items;
+            }
+            const tbody = document.getElementById('optimize-preview-tbody');
+            const countComp = document.getElementById('optimize-count-comparison');
+            const resultsContainer = document.getElementById('optimize-results-container');
+            const btnApply = document.getElementById('btnApplyOptimizedItems');
+
+            tbody.innerHTML = '';
+            countComp.innerText = `${pantryItems.length} itens originais → ${optimizedPantryItemsPreview.length} itens otimizados`;
+
+            optimizedPantryItemsPreview.forEach(it => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-slate-800">${it.name}</td>
+                    <td class="p-2.5 text-slate-500">${it.category}</td>
+                    <td class="p-2.5 text-center font-bold text-emerald-700 bg-emerald-50/50">${it.quantity} ${it.unit}</td>
+                    <td class="p-2.5 text-right font-semibold text-slate-700">R$ ${(parseFloat(it.price) || 0).toFixed(2).replace('.', ',')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            resultsContainer.classList.remove('hidden');
+            btnApply.classList.remove('hidden');
+        }
+
+        async function applyOptimizedPantryItems() {
+            if (!optimizedPantryItemsPreview || optimizedPantryItemsPreview.length === 0) return;
+
+            showToast("Aplicando lista otimizada...", "info");
+
+            try {
+                // 1. Limpar itens antigos no Firestore da despensa ativa
+                if (currentUser && db && currentPantryId) {
+                    try {
+                        const itemsCol = collection(db, 'pantries', currentPantryId, 'items');
+                        const snap = await getDocs(itemsCol);
+                        for (const d of snap.docs) {
+                            await deleteDoc(doc(db, 'pantries', currentPantryId, 'items', d.id)).catch(() => {});
+                        }
+                    } catch(e) {}
+                    try {
+                        const userItemsCol = collection(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items');
+                        const uSnap = await getDocs(userItemsCol);
+                        for (const d of uSnap.docs) {
+                            await deleteDoc(doc(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items', d.id)).catch(() => {});
+                        }
+                    } catch(e) {}
+                }
+
+                // 2. Salvar nova lista otimizada
+                pantryItems = [...optimizedPantryItemsPreview];
+                savePantryItemsToStorage(currentPantryId, pantryItems);
+
+                if (currentUser && db && currentPantryId) {
+                    for (const it of pantryItems) {
+                        try {
+                            await setDoc(doc(db, 'users', currentUser.uid, 'pantries', currentPantryId, 'items', it.id), it, { merge: true }).catch(() => {});
+                        } catch(e) {}
+                        try {
+                            await setDoc(doc(collection(db, 'pantries', currentPantryId, 'items'), it.id), it, { merge: true }).catch(() => {});
+                        } catch(e) {}
+                    }
+                }
+
+                populateCategorySelects();
+                renderAll();
+                closeOptimizePantryModal();
+                showToast("✓ Despensa otimizada e agrupada com sucesso pela IA!", "success");
+            } catch (err) {
+                console.error("Erro ao aplicar otimização:", err);
+                showToast("Erro ao aplicar otimização: " + err.message, "error");
+            }
         }
 
         // Chef IA Recipes
@@ -3784,6 +4083,13 @@ Retorne APENAS um JSON puro no formato:
         window.handleRemovePriceHistoryEntry = handleRemovePriceHistoryEntry;
         window.renderAnalyticsPriceChart = renderAnalyticsPriceChart;
 
+        // Otimizador Inteligente com IA
+        window.openOptimizePantryModal = openOptimizePantryModal;
+        window.closeOptimizePantryModal = closeOptimizePantryModal;
+        window.runOptimizePantryAI = runOptimizePantryAI;
+        window.renderOptimizePreview = renderOptimizePreview;
+        window.applyOptimizedPantryItems = applyOptimizedPantryItems;
+
         // Initialization
         function initializeApp() {
             populateCategorySelects();
@@ -3798,6 +4104,7 @@ Retorne APENAS um JSON puro no formato:
             // Explicit Event Listeners
             document.getElementById('btnConfigIA')?.addEventListener('click', openConfigIAModal);
             document.getElementById('btnScanIA')?.addEventListener('click', openScanModal);
+            document.getElementById('btnOptimizeIA')?.addEventListener('click', openOptimizePantryModal);
             document.getElementById('btnSubmitScan')?.addEventListener('click', processImageWithAI);
             document.getElementById('btnChefGenerate')?.addEventListener('click', generateRecipesWithAI);
             document.getElementById('btnNewItem')?.addEventListener('click', () => openModal());
