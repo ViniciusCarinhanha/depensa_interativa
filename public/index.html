@@ -3577,29 +3577,91 @@ Retorne APENAS um JSON puro no formato:
             showToast("Planilha CSV exportada com sucesso!", "success");
         }
 
-        function copyShoppingListToWhatsApp() {
+        async function copyShoppingListToWhatsApp() {
             const needed = pantryItems.filter(i => (parseInt(i.quantity) || 0) <= (parseInt(i.minQuantity) || 0));
+            const activePantry = userPantries.find(p => p.id === currentPantryId) || { name: 'Despensa' };
+
+            let text = `🛒 *LISTA DE COMPRAS - ${activePantry.name.toUpperCase()}*\n`;
+            text += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
             if (needed.length === 0) {
-                showToast('Nenhum item pendente para compra!', 'info');
-                return;
+                text += `✨ *Todos os itens estão abastecidos!*\n`;
+                text += `Nenhum produto com estoque baixo no momento.\n\n`;
+                
+                // Se não houver itens com estoque baixo, inclui resumo do estoque atual
+                if (pantryItems.length > 0) {
+                    text += `📋 *Itens Cadastrados na Despensa:*\n`;
+                    pantryItems.slice(0, 15).forEach((it, idx) => {
+                        text += `${idx + 1}. ${it.name} (${it.quantity} ${it.unit || 'un'})\n`;
+                    });
+                    text += `\n`;
+                }
+            } else {
+                let totalEstimated = 0;
+                needed.forEach((i, idx) => {
+                    const curr = parseInt(i.quantity) || 0;
+                    const min = parseInt(i.minQuantity) || 1;
+                    const buy = Math.max(1, (min * 2) - curr);
+                    const unitPrice = parseFloat(i.price) || 0;
+                    const itemTotal = buy * unitPrice;
+                    totalEstimated += itemTotal;
+
+                    text += `${idx + 1}. *${i.name}*\n`;
+                    text += `   ▫️ Comprar: *+${buy} ${i.unit || 'un'}* (Estoque atual: ${curr})\n`;
+                    if (unitPrice > 0) {
+                        text += `   ▫️ Valor est.: R$ ${unitPrice.toFixed(2).replace('.', ',')} un (Total: R$ ${itemTotal.toFixed(2).replace('.', ',')})\n`;
+                    }
+                    if (i.category) {
+                        text += `   ▫️ Categoria: ${i.category}\n`;
+                    }
+                    text += `\n`;
+                });
+
+                if (totalEstimated > 0) {
+                    text += `💰 *Custo Total Estimado:* R$ ${totalEstimated.toFixed(2).replace('.', ',')}\n\n`;
+                }
             }
-            let text = `🛒 *LISTA DE COMPRAS - DESPENSA*\n\n`;
-            needed.forEach(i => {
-                const curr = parseInt(i.quantity) || 0;
-                const min = parseInt(i.minQuantity) || 1;
-                const buy = Math.max(1, (min * 2) - curr);
-                text += `▫️ *${i.name}* (${i.category}): Comprar +${buy} ${i.unit}\n`;
-            });
-            text += `\n📅 Gerado em: ${new Date().toLocaleDateString('pt-BR')}`;
 
-            const tempInput = document.createElement('textarea');
-            tempInput.value = text;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
+            text += `📅 _Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}_\n`;
+            text += `📲 _Despensa Inteligente & IA_`;
 
-            showToast('Lista copiada para a área de transferência!', 'success');
+            // Clipboard robusto (Moderno + Fallback)
+            let copied = false;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    copied = true;
+                } catch (e) {
+                    console.warn("Clipboard API falhou, tentando fallback:", e);
+                }
+            }
+
+            if (!copied) {
+                const tempInput = document.createElement('textarea');
+                tempInput.value = text;
+                tempInput.style.position = 'fixed';
+                tempInput.style.left = '-9999px';
+                tempInput.style.top = '0';
+                document.body.appendChild(tempInput);
+                tempInput.focus();
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+                    copied = true;
+                } catch(e) {
+                    console.error("Fallback de cópia falhou:", e);
+                }
+                document.body.removeChild(tempInput);
+            }
+
+            showToast('✓ Lista de compras copiada para a área de transferência!', 'success');
+
+            // Abrir opção de compartilhamento no WhatsApp
+            const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            const shouldOpen = confirm("Lista de compras copiada para a área de transferência!\n\nDeseja abrir o WhatsApp agora para enviar a lista?");
+            if (shouldOpen) {
+                window.open(shareUrl, '_blank');
+            }
         }
 
         function showToast(message, type = 'info') {
