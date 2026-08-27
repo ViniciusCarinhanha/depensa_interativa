@@ -494,24 +494,36 @@
 
                 <!-- Extracted Items Table Preview -->
                 <div id="scan-results-container" class="hidden space-y-3">
-                    <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Produtos Detectados:</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Produtos Detectados:</h4>
+                        <span id="scan-items-count-badge" class="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">0 itens</span>
+                    </div>
+
                     <div class="max-h-52 overflow-y-auto custom-scrollbar border border-slate-200 rounded-lg">
                         <table class="w-full text-xs text-left">
                             <thead class="bg-slate-100 text-slate-600 font-semibold uppercase sticky top-0">
                                 <tr>
-                                    <th class="p-2">Item</th>
+                                    <th class="p-2">Item com Marca</th>
                                     <th class="p-2">Categoria</th>
                                     <th class="p-2 text-center">Qtd</th>
-                                    <th class="p-2 text-right">Preço</th>
+                                    <th class="p-2 text-right">Preço Un.</th>
+                                    <th class="p-2 text-right">Total Nota</th>
                                 </tr>
                             </thead>
                             <tbody id="scan-results-body" class="divide-y divide-slate-100"></tbody>
                         </table>
                     </div>
+
+                    <!-- Totalizador da Nota -->
+                    <div class="text-xs font-bold text-emerald-900 bg-emerald-50/80 border border-emerald-200 px-3 py-2 rounded-lg flex justify-between items-center shadow-2xs">
+                        <span>💰 Total Somado da Nota Fiscal:</span>
+                        <span id="scan-receipt-total-val" class="text-sm font-black text-emerald-700">R$ 0,00</span>
+                    </div>
+
                     <div class="flex justify-end gap-2 pt-2">
                         <button onclick="closeScanModal()" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition cursor-pointer">Cancelar</button>
-                        <button onclick="confirmImportScannedItems()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium shadow-xs transition flex items-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-plus-circle"></i> Adicionar à Despensa
+                        <button onclick="confirmImportScannedItems()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-xs transition flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-plus-circle"></i> Confirmar e Adicionar à Despensa
                         </button>
                     </div>
                 </div>
@@ -2752,10 +2764,34 @@
                     );
 
                     if (existingTwin) {
-                        // Se já existir um item idêntico, atualiza a quantidade e preço em vez de criar um clone
+                        // Se já existir um item idêntico, calcula o custo médio ponderado exato e funde históricos
                         itemData.id = existingTwin.id;
-                        itemData.quantity = (parseInt(existingTwin.quantity) || 0) + (parseInt(itemData.quantity) || 1);
-                        if (priceNum > 0) itemData.price = priceNum;
+                        const existingQty = parseFloat(String(existingTwin.quantity || 0).replace(',', '.')) || 0;
+                        const newQty = parseFloat(String(itemData.quantity || 1).replace(',', '.')) || 1;
+                        const existingPrice = parseFloat(String(existingTwin.price || 0).replace(',', '.')) || 0;
+                        const newPrice = priceNum > 0 ? priceNum : existingPrice;
+
+                        const combinedQty = existingQty + newQty;
+                        const combinedLotTotal = (existingQty * existingPrice) + (newQty * newPrice);
+                        const weightedAvg = combinedQty > 0 ? (combinedLotTotal / combinedQty) : newPrice;
+
+                        itemData.quantity = combinedQty;
+                        itemData.price = parseFloat(weightedAvg.toFixed(2));
+
+                        // Combinar purchaseHistory
+                        let mergedPurchases = Array.isArray(existingTwin.purchaseHistory) ? [...existingTwin.purchaseHistory] : [];
+                        if (Array.isArray(itemData.purchaseHistory)) {
+                            itemData.purchaseHistory.forEach(h => mergedPurchases.push(h));
+                        } else {
+                            mergedPurchases.push({
+                                date: today,
+                                price: newPrice,
+                                qty: newQty,
+                                brand: itemData.brand || existingTwin.brand || '',
+                                note: 'Compra Adicional'
+                            });
+                        }
+                        itemData.purchaseHistory = mergedPurchases;
                     } else {
                         itemData.id = 'item_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
                     }
@@ -3445,22 +3481,27 @@
             processing.classList.remove('hidden');
 
             const currentCats = getAvailableCategories().join(', ');
-            const prompt = `Você é um assistente especialista em leitura e digitalização de cupons fiscais e inventário de despensa.
-Analise a imagem da nota fiscal/recibo/produtos e extraia os itens seguindo ESTRITAMENTE estas regras:
-1. NUNCA copie abreviações fiscais crípticas (Ex: 'BISC RECH PASSAT CHOC' -> 'Biscoito Recheado Passatempo', 'REFRI COCA PET 2L' -> 'Refrigerante Coca-Cola 2L', 'DESINF PINHO SOL 1L' -> 'Desinfetante Pinho Sol 1L').
-2. Nomes didáticos e claros: Formate cada produto com nome comercial legível em português.
-3. Agrupamento de itens idênticos ou sabores da mesma marca: Se houver mais de uma linha para o mesmo produto com sabores diferentes (Ex: 'Ruffles Cebola 130g' + 'Ruffles Churrasco 130g'), agrupe em um único item didático 'Batata Chips Ruffles' com a quantidade total somada (ex: 2 un).
-4. Preço unitário correto: Indique o preço unitário em reais (R$) de cada item/embalagem.
-5. Unidades padronizadas: Use 'un', 'pct', 'cx', 'kg', 'g', 'L', 'ml', 'lata', 'garrafa'.
+            const prompt = `Você é um assistente especialista em leitura de cupons fiscais e inventário de despensa.
+Analise a imagem da nota fiscal/recibo/produtos e extraia os itens com RIGOR FINANCEIRO ABSOLUTO:
+1. NUNCA copie abreviações fiscais crípticas (Ex: 'BISC RECH PASSAT CHOC' -> 'Biscoito Recheado Passatempo Nestlé', 'REFRI COCA PET 2L' -> 'Refrigerante Coca-Cola 2L', 'DESINF PINHO SOL 1L' -> 'Desinfetante Pinho Sol 1L').
+2. Nomes comerciais claros: Formate cada produto com nome didático em português, preservando a marca explícita se visível.
+3. PREÇO UNITÁRIO VS TOTAL (CRÍTICO):
+   - "quantity": Quantidade de unidades/embalagens compradas (ex: 2 se foram 2 unidades, 1 se foi 1 pacote).
+   - "unitPrice": Preço UNITÁRIO (por 1 unidade/embalagem) em reais (R$). Ex: se comprou 3 pacotes por R$ 15,00 no total, unitPrice é 5.00.
+   - "totalPrice": Valor TOTAL pago por aquela linha no cupom fiscal (quantidade x preço unitário). Ex: 15.00.
+   - NUNCA coloque o valor total da linha no campo unitPrice!
+4. Unidades padronizadas: Use 'un', 'pct', 'cx', 'kg', 'g', 'L', 'ml', 'lata', 'garrafa'.
 
-Retorne APENAS um array JSON puro (sem explicações, sem markdown) com esta estrutura:
+Retorne APENAS um array JSON puro (sem explicações, sem crases markdown além de json):
 [
   {
-    "name": "Nome Didático do Produto",
+    "name": "Nome Comercial com Marca",
+    "brand": "Marca",
     "category": "Snacks e Doces",
     "quantity": 2,
     "unit": "pct",
-    "price": 8.50
+    "unitPrice": 5.00,
+    "totalPrice": 10.00
   }
 ]
 Sugestão de Categorias: ${currentCats}`;
@@ -3471,10 +3512,41 @@ Sugestão de Categorias: ${currentCats}`;
                 if (cleanText.startsWith('```json')) cleanText = cleanText.replace(/^```json/, '').replace(/```$/, '');
                 else if (cleanText.startsWith('```')) cleanText = cleanText.replace(/^```/, '').replace(/```$/, '');
 
-                detectedScannedItems = JSON.parse(cleanText.trim());
-                if (!Array.isArray(detectedScannedItems) || detectedScannedItems.length === 0) {
+                const parsed = JSON.parse(cleanText.trim());
+                if (!Array.isArray(parsed) || parsed.length === 0) {
                     throw new Error("Nenhum item detectado.");
                 }
+
+                // Normalização financeira rigorosa
+                detectedScannedItems = parsed.map(item => {
+                    let q = parseFloat(String(item.quantity || 1).replace(',', '.')) || 1;
+                    let up = parseFloat(String(item.unitPrice || item.price || 0).replace(',', '.')) || 0;
+                    let tp = parseFloat(String(item.totalPrice || 0).replace(',', '.')) || 0;
+
+                    if (tp > 0 && q > 0) {
+                        // Se a IA confundiu unitPrice com totalPrice
+                        if (Math.abs(up * q - tp) > 0.05 && Math.abs(up - tp) < 0.05 && q > 1) {
+                            up = tp / q;
+                        } else if (up <= 0) {
+                            up = tp / q;
+                        }
+                        tp = parseFloat((q * up).toFixed(2));
+                    } else if (up > 0 && q > 0) {
+                        tp = parseFloat((q * up).toFixed(2));
+                    }
+
+                    return {
+                        name: item.name || 'Produto',
+                        brand: item.brand || '',
+                        category: item.category || 'Outros',
+                        quantity: q,
+                        unit: item.unit || 'un',
+                        unitPrice: parseFloat(up.toFixed(2)),
+                        price: parseFloat(up.toFixed(2)),
+                        totalPrice: tp
+                    };
+                });
+
                 renderScannedResults();
             } catch (err) {
                 console.error("[Scanner] Erro:", err);
@@ -3487,37 +3559,61 @@ Sugestão de Categorias: ${currentCats}`;
 
         function renderScannedResults() {
             const tbody = document.getElementById('scan-results-body');
+            const totalEl = document.getElementById('scan-receipt-total-val');
+            const countBadge = document.getElementById('scan-items-count-badge');
             tbody.innerHTML = '';
 
+            let receiptSum = 0;
+
             detectedScannedItems.forEach(item => {
+                const lineTotal = item.totalPrice || (item.unitPrice * item.quantity);
+                receiptSum += lineTotal;
+
                 const tr = document.createElement('tr');
+                const brandBadge = item.brand ? `<span class="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1">${item.brand}</span>` : '';
                 tr.innerHTML = `
-                    <td class="p-2 font-medium text-slate-800">${item.name || 'Produto'}</td>
-                    <td class="p-2 text-slate-500">${item.category || 'Outros'}</td>
-                    <td class="p-2 text-center font-bold">${item.quantity || 1} ${item.unit || 'un'}</td>
-                    <td class="p-2 text-right text-emerald-600 font-semibold">R$ ${(parseFloat(item.price) || 0).toFixed(2)}</td>
+                    <td class="p-2 font-medium text-slate-800">${item.name} ${brandBadge}</td>
+                    <td class="p-2 text-slate-500">${item.category}</td>
+                    <td class="p-2 text-center font-bold">${item.quantity} ${item.unit}</td>
+                    <td class="p-2 text-right text-slate-600">R$ ${(parseFloat(item.unitPrice) || 0).toFixed(2).replace('.', ',')}</td>
+                    <td class="p-2 text-right text-emerald-700 font-bold">R$ ${(parseFloat(lineTotal) || 0).toFixed(2).replace('.', ',')}</td>
                 `;
                 tbody.appendChild(tr);
             });
 
+            if (totalEl) totalEl.innerText = `R$ ${receiptSum.toFixed(2).replace('.', ',')}`;
+            if (countBadge) countBadge.innerText = `${detectedScannedItems.length} itens`;
+
             document.getElementById('scan-results-container').classList.remove('hidden');
         }
 
-        async function confirmImportScannedItems() {
-            for (const item of detectedScannedItems) {
+        async function confirmImportScannedItems(items) {
+            const list = (items && Array.isArray(items)) ? items : ((window.detectedScannedItems && Array.isArray(window.detectedScannedItems) && window.detectedScannedItems.length > 0) ? window.detectedScannedItems : detectedScannedItems);
+            const todayStr = new Date().toISOString().split('T')[0];
+            for (const item of list) {
+                const q = parseFloat(item.quantity) || 1;
+                const up = parseFloat(item.unitPrice || item.price) || 0;
                 await savePantryItem({
                     name: item.name || 'Novo Item',
+                    brand: item.brand || '',
                     category: item.category || 'Outros',
                     location: 'Armário Principal',
-                    quantity: parseInt(item.quantity) || 1,
+                    quantity: q,
                     unit: item.unit || 'un',
                     minQuantity: 1,
                     expiry: getRelativeDate(60),
-                    price: parseFloat(item.price) || 0
+                    price: up,
+                    purchaseHistory: [{
+                        date: todayStr,
+                        price: up,
+                        qty: q,
+                        brand: item.brand || '',
+                        note: 'Cupom Fiscal'
+                    }]
                 });
             }
             closeScanModal();
-            showToast(`${detectedScannedItems.length} itens importados com sucesso!`, 'success');
+            showToast(`${list.length} itens importados com precisão financeira!`, 'success');
         }
 
         // =========================================================================
@@ -4138,6 +4234,7 @@ Retorne APENAS um JSON puro no formato:
         window.sortTable = sortTable;
         window.renderPantryTable = renderPantryTable;
         window.getItemTotalValue = getItemTotalValue;
+        window.getPantryItems = () => pantryItems;
         window.loginWithGoogle = loginWithGoogle;
         window.logout = logout;
         window.openConfigIAModal = openConfigIAModal;
