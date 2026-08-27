@@ -844,10 +844,15 @@
                     <!-- Inserido dinamicamente via JS -->
                 </div>
 
-                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                    <button onclick="openCreatePantryModal(); closeManagePantriesModal();" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 cursor-pointer">
-                        <i class="fa-solid fa-plus-circle"></i> + Criar Nova Despensa
-                    </button>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-3">
+                        <button onclick="openCreatePantryModal(); closeManagePantriesModal();" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 cursor-pointer">
+                            <i class="fa-solid fa-plus-circle"></i> + Nova Despensa
+                        </button>
+                        <button onclick="cleanLegacyPantries()" class="text-xs text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-lg font-bold flex items-center gap-1 cursor-pointer transition shadow-2xs" title="Unificar despensa mestre e limpar duplicadas">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Unificar e Limpar Antigas
+                        </button>
+                    </div>
                     <button type="button" onclick="closeManagePantriesModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer">
                         Fechar
                     </button>
@@ -1560,6 +1565,86 @@
             renderPantrySelector();
             renderManagePantriesModalList();
             showToast(`Despensa renomeada para "${name}"!`, 'success');
+        }
+
+        async function cleanLegacyPantries() {
+            if (!currentUser || !db) {
+                showToast("Faça login com sua conta Google primeiro.", "error");
+                return;
+            }
+
+            const confirmed = confirm("Deseja unificar todas as listas em uma única despensa mestre sincronizada em tempo real em todos os seus dispositivos (PC e Celular)?");
+            if (!confirmed) return;
+
+            showToast("Unificando despensas...", "info");
+
+            try {
+                const currentPantry = userPantries.find(p => p.id === currentPantryId) || userPantries[0];
+                const masterPantryId = 'pantry_' + currentUser.uid.substring(0, 8);
+                const trueName = (currentPantry && currentPantry.name && currentPantry.name !== 'Despensa Principal') ? currentPantry.name : 'Casa Vini';
+                const trueCode = (currentPantry && currentPantry.shareCode && currentPantry.shareCode.length >= 8 && !currentPantry.shareCode.startsWith('DSP-LOCAL')) ? currentPantry.shareCode : generateShareCode();
+
+                const canonicalPantry = {
+                    id: masterPantryId,
+                    name: trueName,
+                    shareCode: trueCode,
+                    ownerUid: currentUser.uid,
+                    ownerName: currentUser.displayName || 'Usuário',
+                    members: [currentUser.uid],
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                // 1. Gravar despensa canônica no Firestore
+                await setDoc(doc(db, 'pantries', masterPantryId), canonicalPantry, { merge: true });
+                await setDoc(doc(db, 'users', currentUser.uid, 'pantries', masterPantryId), {
+                    pantryId: masterPantryId,
+                    name: canonicalPantry.name,
+                    shareCode: canonicalPantry.shareCode,
+                    role: 'owner',
+                    joinedAt: new Date().toISOString()
+                }, { merge: true });
+
+                await setDoc(doc(db, 'users', currentUser.uid), {
+                    activePantryId: masterPantryId,
+                    displayName: currentUser.displayName || '',
+                    email: currentUser.email || '',
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                // 2. Limpar subcoleções antigas da conta
+                try {
+                    const userPantriesCol = collection(db, 'users', currentUser.uid, 'pantries');
+                    const snap = await getDocs(userPantriesCol);
+                    for (const d of snap.docs) {
+                        if (d.id !== masterPantryId) {
+                            await deleteDoc(doc(db, 'users', currentUser.uid, 'pantries', d.id)).catch(() => {});
+                        }
+                    }
+                } catch(e) {}
+
+                // 3. Migrar e consolidar todos os itens na despensa mestre
+                for (const it of pantryItems) {
+                    await setDoc(doc(collection(db, 'pantries', masterPantryId, 'items'), it.id), it, { merge: true }).catch(() => {});
+                    await setDoc(doc(db, 'users', currentUser.uid, 'pantries', masterPantryId, 'items', it.id), it, { merge: true }).catch(() => {});
+                }
+
+                currentPantryId = masterPantryId;
+                userPantries = [canonicalPantry];
+                savePantriesToStorage(userPantries);
+                savePantryItemsToStorage(masterPantryId, pantryItems);
+                localStorage.setItem(STORAGE_KEYS.ACTIVE_PANTRY, masterPantryId);
+                localStorage.setItem('active_pantry_id', masterPantryId);
+
+                renderPantrySelector();
+                renderManagePantriesModalList();
+                setupRealtimeListener();
+
+                showToast(`✓ Despensa "${canonicalPantry.name}" (${canonicalPantry.shareCode}) unificada com sucesso!`, 'success');
+            } catch (err) {
+                console.error("Erro na unificação de despensas:", err);
+                showToast("Erro ao unificar: " + err.message, "error");
+            }
         }
 
         function openCreatePantryModal() {
@@ -3578,6 +3663,7 @@ Retorne APENAS um JSON puro no formato:
         window.closeManagePantriesModal = closeManagePantriesModal;
         window.renderManagePantriesModalList = renderManagePantriesModalList;
         window.renamePantry = renamePantry;
+        window.cleanLegacyPantries = cleanLegacyPantries;
         window.openCreatePantryModal = openCreatePantryModal;
         window.closeCreatePantryModal = closeCreatePantryModal;
         window.handleCreatePantry = handleCreatePantry;
